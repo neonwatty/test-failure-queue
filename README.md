@@ -54,6 +54,29 @@ npm install -g tfq
 
 ### CLI Commands
 
+#### List supported languages and frameworks
+```bash
+tfq languages
+tfq languages --json
+```
+
+#### Run tests with language support
+```bash
+# Auto-detect language and framework
+tfq run-tests --auto-detect
+
+# Specify language
+tfq run-tests --language javascript --framework jest
+tfq run-tests --language python --framework pytest
+tfq run-tests --language ruby --framework rspec
+
+# List available frameworks for a language
+tfq run-tests --list-frameworks --language python
+
+# Run tests and auto-add failures to queue
+tfq run-tests --auto-detect --auto-add --priority 5
+```
+
 #### Add a failed test to the queue
 ```bash
 tfq add path/to/test.spec.ts
@@ -135,13 +158,18 @@ export TFQ_DB_PATH=./my-project-queue.db
 You can integrate TFQ with your test runner to automatically track failures:
 
 ```bash
-# Run tests and add failures to queue
-npm test 2>&1 | grep "FAIL" | awk '{print $2}' | xargs -I {} tfq add {}
+# Auto-detect and run tests for any language
+tfq run-tests --auto-detect --auto-add
+
+# Language-specific examples
+tfq run-tests --language javascript --framework jest --auto-add
+tfq run-tests --language python --framework pytest --auto-add
+tfq run-tests --language ruby --framework rspec --auto-add
 
 # Work through failures one by one
 while tfq next; do
   FILE=$(tfq next --json | jq -r '.filePath')
-  npm test "$FILE"
+  npm test "$FILE"  # or pytest, rspec, etc.
   if [ $? -eq 0 ]; then
     tfq resolve "$FILE"
   fi

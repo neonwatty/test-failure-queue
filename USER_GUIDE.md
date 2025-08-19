@@ -26,11 +26,20 @@ npm install tfq
 ## Quick Start
 
 ```bash
-# Run tests and detect failures
-tfq run-tests
+# List all supported languages and frameworks
+tfq languages
+
+# Auto-detect language and run tests
+tfq run-tests --auto-detect
+
+# Run tests for specific language
+tfq run-tests --language python --framework pytest
+
+# List available frameworks for a language
+tfq run-tests --list-frameworks --language ruby
 
 # Run tests and automatically add failures to queue
-tfq run-tests --auto-add
+tfq run-tests --auto-detect --auto-add
 
 # Add a failed test to the queue manually
 tfq add tests/user.test.ts
@@ -46,6 +55,32 @@ tfq stats
 ```
 
 ## CLI Usage for Humans
+
+### Discovering Supported Languages and Frameworks
+
+List all supported languages and their test frameworks:
+```bash
+# Display formatted list
+tfq languages
+
+# Output in JSON format
+tfq languages --json
+```
+
+List frameworks for a specific language:
+```bash
+# List JavaScript frameworks
+tfq run-tests --list-frameworks --language javascript
+
+# List Python frameworks
+tfq run-tests --list-frameworks --language python
+
+# List Ruby frameworks
+tfq run-tests --list-frameworks --language ruby
+
+# With auto-detect (uses current project)
+tfq run-tests --list-frameworks --auto-detect
+```
 
 ### Running Tests and Detecting Failures
 
@@ -189,6 +224,37 @@ tfq stats
 ## CLI Usage for AI Agents
 
 All commands support `--json` flag for machine-readable output.
+
+### Listing Languages and Frameworks (JSON Mode)
+
+```bash
+# List all languages and frameworks
+tfq languages --json
+```
+
+Output:
+```json
+{
+  "success": true,
+  "languages": [
+    {
+      "language": "javascript",
+      "supportedFrameworks": ["jest", "mocha", "vitest", "jasmine", "ava"],
+      "defaultFramework": "jest"
+    },
+    {
+      "language": "ruby",
+      "supportedFrameworks": ["minitest", "rspec", "test-unit", "cucumber"],
+      "defaultFramework": "rspec"
+    },
+    {
+      "language": "python",
+      "supportedFrameworks": ["pytest", "unittest", "django", "nose2"],
+      "defaultFramework": "pytest"
+    }
+  ]
+}
+```
 
 ### Running Tests (JSON Mode)
 

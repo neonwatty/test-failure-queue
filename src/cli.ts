@@ -3,9 +3,10 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { TestFailureQueue } from './queue';
-import { QueueItem, ConfigFile, TestFramework } from './types';
+import { QueueItem, ConfigFile, TestFramework, TestLanguage } from './types';
 import { ConfigManager, loadConfig } from './config';
 import { TestRunner } from './test-runner';
+import { adapterRegistry } from './adapters/registry';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -365,37 +366,129 @@ program
 program
   .command('run-tests [command]')
   .description('Run tests and detect failures')
-  .option('-f, --framework <type>', 'Test framework: jest|mocha|vitest', 'jest')
+  .option('-l, --language <type>', 'Programming language: javascript|ruby|python')
+  .option('-f, --framework <type>', 'Test framework (e.g., jest, mocha, vitest, rspec, pytest)')
+  .option('--auto-detect', 'Auto-detect language and framework')
+  .option('--list-frameworks', 'List available frameworks for the language')
   .option('--auto-add', 'Automatically add failing tests to queue')
   .option('-p, --priority <number>', 'Priority for auto-added tests', '0')
   .option('--json', 'Output in JSON format')
   .action((command: string | undefined, options) => {
     try {
-      const testCommand = command || 'npm test';
-      const framework = options.framework.toLowerCase();
+      let language: TestLanguage | null = options.language || null;
+      let framework: string | null = options.framework || null;
       
-      if (!TestRunner.isValidFramework(framework)) {
+      // Handle --list-frameworks
+      if (options.listFrameworks) {
+        if (!language && !options.autoDetect) {
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ 
+              success: false, 
+              error: 'Please specify a language with --language or use --auto-detect' 
+            }));
+          } else {
+            console.error(chalk.red('Error:'), 'Please specify a language with --language or use --auto-detect');
+          }
+          process.exit(1);
+        }
+        
+        if (options.autoDetect && !language) {
+          language = adapterRegistry.detectLanguage();
+          if (!language) {
+            if (useJsonOutput(options)) {
+              console.log(JSON.stringify({ 
+                success: false, 
+                error: 'Could not detect language from project' 
+              }));
+            } else {
+              console.error(chalk.red('Error:'), 'Could not detect language from project');
+            }
+            process.exit(1);
+          }
+        }
+        
+        const frameworks = adapterRegistry.getFrameworksForLanguage(language!);
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ 
+            success: true, 
+            language, 
+            frameworks 
+          }));
+        } else {
+          console.log(chalk.bold(`\nAvailable frameworks for ${language}:`));
+          frameworks.forEach(fw => console.log(`  - ${fw}`));
+          console.log();
+        }
+        return;
+      }
+      
+      // Auto-detect language and framework if requested
+      if (options.autoDetect) {
+        if (!language) {
+          language = adapterRegistry.detectLanguage();
+          if (!language) {
+            // Default to JavaScript for backward compatibility
+            language = 'javascript';
+          }
+        }
+        
+        if (!framework) {
+          framework = adapterRegistry.detectFramework(language);
+        }
+      } else if (!language) {
+        // Default to JavaScript for backward compatibility
+        language = 'javascript';
+      }
+      
+      // Validate language
+      if (!adapterRegistry.hasAdapter(language)) {
         if (useJsonOutput(options)) {
           console.log(JSON.stringify({ 
             success: false, 
-            error: `Invalid framework: ${framework}. Must be one of: ${TestRunner.getFrameworks().join(', ')}` 
+            error: `Unsupported language: ${language}` 
           }));
         } else {
-          console.error(chalk.red('Error:'), `Invalid framework: ${framework}`);
-          console.error(`Must be one of: ${TestRunner.getFrameworks().join(', ')}`);
+          console.error(chalk.red('Error:'), `Unsupported language: ${language}`);
         }
         process.exit(1);
       }
+      
+      // Get default framework if not specified
+      if (!framework) {
+        const adapter = adapterRegistry.get(language);
+        framework = adapter.defaultFramework;
+      }
+      
+      // Validate framework for the language
+      const supportedFrameworks = adapterRegistry.getFrameworksForLanguage(language);
+      if (!supportedFrameworks.includes(framework)) {
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ 
+            success: false, 
+            error: `Invalid framework '${framework}' for ${language}. Must be one of: ${supportedFrameworks.join(', ')}` 
+          }));
+        } else {
+          console.error(chalk.red('Error:'), `Invalid framework '${framework}' for ${language}`);
+          console.error(`Must be one of: ${supportedFrameworks.join(', ')}`);
+        }
+        process.exit(1);
+      }
+      
+      const testCommand = command || undefined;
 
       const runner = new TestRunner({
         command: testCommand,
+        language: language as TestLanguage,
         framework: framework as TestFramework
       });
 
       if (!useJsonOutput(options)) {
         console.log(chalk.blue('Running tests...'));
-        console.log(chalk.gray(`Command: ${testCommand}`));
+        console.log(chalk.gray(`Language: ${language}`));
         console.log(chalk.gray(`Framework: ${framework}`));
+        if (testCommand) {
+          console.log(chalk.gray(`Command: ${testCommand}`));
+        }
         console.log();
       }
 
@@ -408,6 +501,7 @@ program
           failingTests: result.failingTests,
           totalFailures: result.totalFailures,
           duration: result.duration,
+          language: result.language,
           framework: result.framework,
           command: result.command,
           error: result.error
@@ -447,6 +541,47 @@ program
       }
 
       process.exit(result.exitCode);
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command('languages')
+  .description('List all supported languages and their test frameworks')
+  .option('--json', 'Output in JSON format')
+  .action((options) => {
+    try {
+      const adapters = adapterRegistry.list();
+      
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ 
+          success: true, 
+          languages: adapters 
+        }));
+      } else {
+        console.log(chalk.bold('\nSupported Languages and Frameworks:\n'));
+        
+        for (const adapter of adapters) {
+          console.log(chalk.cyan(`${adapter.language}:`));
+          console.log(`  Default framework: ${chalk.yellow(adapter.defaultFramework)}`);
+          console.log(`  Supported frameworks:`);
+          adapter.supportedFrameworks.forEach(fw => {
+            const isDefault = fw === adapter.defaultFramework;
+            const marker = isDefault ? chalk.green(' (default)') : '';
+            console.log(`    - ${fw}${marker}`);
+          });
+          console.log();
+        }
+        
+        console.log(chalk.gray('Use --auto-detect to automatically detect the language and framework'));
+        console.log(chalk.gray('Use --list-frameworks with a specific language to see its frameworks'));
+      }
     } catch (error: any) {
       if (useJsonOutput(options)) {
         console.log(JSON.stringify({ success: false, error: error.message }));
