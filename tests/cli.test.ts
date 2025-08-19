@@ -2,10 +2,14 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+const kill = require('tree-kill');
 
 describe('CLI Commands', () => {
   const cliPath = path.join(__dirname, '..', 'src', 'cli.ts');
   const testDbPath = path.join(os.tmpdir(), 'test-cli-queue.db');
+  
+  // Track active child processes for cleanup
+  const activeProcesses = new Set<any>();
   
   beforeEach(() => {
     // Clean up test database
@@ -19,15 +23,55 @@ describe('CLI Commands', () => {
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
+    
+    // Clean up any remaining child processes
+    activeProcesses.forEach(child => {
+      if (!child.killed && child.pid) {
+        // Use tree-kill to ensure all child processes are killed
+        kill(child.pid, 'SIGKILL');
+      }
+    });
+    activeProcesses.clear();
   });
 
-  function runCLI(args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    return new Promise((resolve) => {
+  function runCLI(args: string[], timeout = 5000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    return new Promise((resolve, reject) => {
       const env = { ...process.env, TFQ_DB_PATH: testDbPath };
-      const child = spawn('npx', ['tsx', cliPath, ...args], { env });
+      const child = spawn('npx', ['tsx', cliPath, ...args], { 
+        env
+      });
+      
+      // Track this process
+      activeProcesses.add(child);
       
       let stdout = '';
       let stderr = '';
+      let timeoutId: NodeJS.Timeout;
+      let resolved = false;
+      
+      // Cleanup function
+      const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        activeProcesses.delete(child);
+        if (!child.killed && child.pid) {
+          // Use tree-kill to kill the entire process tree
+          kill(child.pid, 'SIGTERM', (err: any) => {
+            if (err) {
+              // Try SIGKILL if SIGTERM failed
+              kill(child.pid, 'SIGKILL');
+            }
+          });
+        }
+      };
+      
+      // Set timeout
+      timeoutId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          reject(new Error(`CLI command timed out after ${timeout}ms`));
+        }
+      }, timeout);
       
       child.stdout.on('data', (data) => {
         stdout += data.toString();
@@ -38,7 +82,19 @@ describe('CLI Commands', () => {
       });
       
       child.on('close', (exitCode) => {
-        resolve({ stdout, stderr, exitCode: exitCode || 0 });
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          resolve({ stdout, stderr, exitCode: exitCode || 0 });
+        }
+      });
+      
+      child.on('error', (error) => {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          reject(error);
+        }
       });
     });
   }

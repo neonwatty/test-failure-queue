@@ -73,9 +73,9 @@ export class RubyAdapter extends BaseAdapter {
         
       case 'test-unit':
         if (testPath) {
-          return `ruby ${basePath}`;
+          return `ruby -Ilib:test ${basePath}`;
         }
-        return 'rake test';
+        return 'ruby -Ilib:test';
         
       default:
         return 'rake test';
@@ -87,7 +87,7 @@ export class RubyAdapter extends BaseAdapter {
       case 'minitest':
         return [
           {
-            pattern: /^Failure:\n(.+?)#(.+?)\s+\[(.+?):(\d+)\]/m,
+            pattern: /Failure:\n(.+?)#(.+?)\s+\[(.+?):(\d+)\]/gm,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[3],
@@ -95,7 +95,7 @@ export class RubyAdapter extends BaseAdapter {
             })
           },
           {
-            pattern: /^Error:\n(.+?)#(.+?):\n(.+?)\n\s+(.+?):(\d+):in/m,
+            pattern: /Error:\n(.+?)#(.+?):\n(.+?)\n\s+(.+?):(\d+)/gm,
             type: 'error',
             extractLocation: (match) => ({
               file: match[4],
@@ -103,7 +103,16 @@ export class RubyAdapter extends BaseAdapter {
             })
           },
           {
-            pattern: /rails test (.+?):(\d+)/,
+            pattern: /rails test (.+?):(\d+)/g,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: match[1],
+              line: parseInt(match[2], 10)
+            })
+          },
+          {
+            // Match simple "Failure: path/to/file.rb:123" format
+            pattern: /^Failure:\s+([^:\[\s]+\.rb):(\d+)$/gm,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[1],
@@ -115,11 +124,11 @@ export class RubyAdapter extends BaseAdapter {
       case 'rspec':
         return [
           {
-            pattern: /rspec\s+(.\/)?(.+?):(\d+)/,
+            pattern: /rspec\s+((?:\.\/)?(?:.+?)):(\d+)/,
             type: 'failure',
             extractLocation: (match) => ({
-              file: match[2],
-              line: parseInt(match[3], 10)
+              file: match[1],
+              line: parseInt(match[2], 10)
             })
           },
           {
@@ -137,11 +146,11 @@ export class RubyAdapter extends BaseAdapter {
               const failedExamples = match[1].split('\n').filter(line => line.trim());
               if (failedExamples.length > 0) {
                 const firstExample = failedExamples[0];
-                const fileMatch = firstExample.match(/rspec\s+(.\/)?(.+?):(\d+)/);
+                const fileMatch = firstExample.match(/rspec\s+((?:\.\/)?(?:.+?)):(\d+)/);
                 if (fileMatch) {
                   return {
-                    file: fileMatch[2],
-                    line: parseInt(fileMatch[3], 10)
+                    file: fileMatch[1],
+                    line: parseInt(fileMatch[2], 10)
                   };
                 }
               }
@@ -153,7 +162,7 @@ export class RubyAdapter extends BaseAdapter {
       case 'cucumber':
         return [
           {
-            pattern: /(.+?\.feature):(\d+)/,
+            pattern: /(.+?\.feature):(\d+)/g,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[1],
@@ -161,7 +170,7 @@ export class RubyAdapter extends BaseAdapter {
             })
           },
           {
-            pattern: /Failing Scenarios:\n((?:.+?\.feature:\d+.+?\n?)+)/m,
+            pattern: /Failing Scenarios:\n((?:.+?\.feature:\d+.+?\n?)+)/gm,
             type: 'failure',
             extractLocation: (match) => {
               const scenarios = match[1].split('\n').filter(line => line.trim());
@@ -183,7 +192,7 @@ export class RubyAdapter extends BaseAdapter {
       case 'test-unit':
         return [
           {
-            pattern: /Failure:\n(.+?)\((.+?)\)\s+\[(.+?):(\d+)\]/,
+            pattern: /Failure:\n(.+?)\((.+?)\)\s+\[(.+?):(\d+)\]/gm,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[3],
@@ -191,7 +200,7 @@ export class RubyAdapter extends BaseAdapter {
             })
           },
           {
-            pattern: /Error:\n(.+?)\((.+?)\):\n(.+?)\n\s+(.+?):(\d+)/,
+            pattern: /Error:\n(.+?)\((.+?)\):\n(.+?)\n\s+(.+?):(\d+)/gm,
             type: 'error',
             extractLocation: (match) => ({
               file: match[4],
@@ -212,7 +221,10 @@ export class RubyAdapter extends BaseAdapter {
     const summary = this.extractRubySummary(output, framework);
     
     const passed = failures.length === 0 && errors.length === 0;
-    const failingTests = [...new Set(failures.map(f => f.file))];
+    const failingTests = [...new Set([
+      ...failures.map(f => f.line ? `${f.file}:${f.line}` : f.file),
+      ...errors.map(e => e.line ? `${e.file}:${e.line}` : e.file)
+    ])];
     
     return {
       passed,

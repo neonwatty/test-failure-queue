@@ -86,8 +86,17 @@ export class TestRunner {
   }
 
   private extractFailingTests(output: string): string[] {
-    const parsedOutput = this.adapter.parseTestOutput(output, this.framework);
-    return parsedOutput.failingTests;
+    try {
+      if (!this.adapter.parseTestOutput || typeof this.adapter.parseTestOutput !== 'function') {
+        console.warn(`Adapter for ${this.language} is missing parseTestOutput method`);
+        return [];
+      }
+      const parsedOutput = this.adapter.parseTestOutput(output, this.framework);
+      return parsedOutput.failingTests;
+    } catch (error) {
+      console.warn(`Error parsing test output for ${this.language}/${this.framework}:`, error);
+      return [];
+    }
   }
 
   static getLanguages(): TestLanguage[] {

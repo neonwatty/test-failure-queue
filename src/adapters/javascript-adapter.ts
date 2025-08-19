@@ -95,7 +95,7 @@ export class JavaScriptAdapter extends BaseAdapter {
       case 'mocha':
         return [
           {
-            pattern: /\d+\)\s+.+:\s*\n\s+(.+\.(?:test|spec)\.[jt]sx?)(?::(\d+))?/gm,
+            pattern: /^\s+(\S+\.(?:test|spec)\.[jt]sx?):(\d+)/gm,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[1],
@@ -103,11 +103,19 @@ export class JavaScriptAdapter extends BaseAdapter {
             })
           },
           {
-            pattern: /\s+\d+\)\s+(.+\.(?:test|spec)\.[jt]sx?):/gm,
+            pattern: /at Context\.<anonymous>\s+\(([^:]+\.(?:test|spec)\.[jt]sx?):(\d+):\d+\)/g,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[1],
-              line: undefined
+              line: match[2] ? parseInt(match[2], 10) : undefined
+            })
+          },
+          {
+            pattern: /at\s+(?:Context\.|Test\.|Suite\.)?<anonymous>\s+\(([^:]+\.(?:test|spec)\.[jt]sx?):(\d+):\d+\)/g,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: match[1],
+              line: match[2] ? parseInt(match[2], 10) : undefined
             })
           },
           {
@@ -192,7 +200,10 @@ export class JavaScriptAdapter extends BaseAdapter {
     const summary = this.extractSummary(output);
     
     const passed = failures.length === 0 && errors.length === 0;
-    const failingTests = [...new Set(failures.map(f => f.file))];
+    const failingTests = [...new Set([
+      ...failures.map(f => f.line ? `${f.file}:${f.line}` : f.file),
+      ...errors.map(e => e.line ? `${e.file}:${e.line}` : e.file)
+    ])];
     
     return {
       passed,

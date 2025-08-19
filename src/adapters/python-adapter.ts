@@ -34,12 +34,19 @@ export class PythonAdapter extends BaseAdapter {
       dependencies += '\n' + fs.readFileSync(setupPyPath, 'utf-8');
     }
     
-    if (fs.existsSync(managePyPath) || dependencies.includes('django')) {
+    // Prefer Django only if manage.py exists
+    if (fs.existsSync(managePyPath)) {
       return 'django';
     }
     
+    // Check for pytest before django in dependencies
     if (dependencies.includes('pytest')) {
       return 'pytest';
+    }
+    
+    // Check for django without manage.py
+    if (dependencies.includes('django')) {
+      return 'django';
     }
     
     if (dependencies.includes('nose2')) {
@@ -51,10 +58,31 @@ export class PythonAdapter extends BaseAdapter {
     if (fs.existsSync(testsDir) || fs.existsSync(testDir)) {
       const testFiles = fs.readdirSync(fs.existsSync(testsDir) ? testsDir : testDir);
       if (testFiles.some(file => file.startsWith('test_') || file.endsWith('_test.py'))) {
+        // Check if unittest is explicitly used
+        const hasUnittestFiles = testFiles.some(file => {
+          if (file.endsWith('.py')) {
+            const filePath = path.join(fs.existsSync(testsDir) ? testsDir : testDir, file);
+            try {
+              const stats = fs.statSync(filePath);
+              if (stats.isFile()) {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                return content.includes('import unittest') || content.includes('from unittest');
+              }
+            } catch (error) {
+              // File doesn't exist or not accessible
+              return false;
+            }
+          }
+          return false;
+        });
+        if (hasUnittestFiles && !dependencies.includes('pytest')) {
+          return 'unittest';
+        }
         return 'pytest';
       }
     }
     
+    // Default to unittest if no specific framework is detected
     return 'unittest';
   }
   
@@ -96,77 +124,45 @@ export class PythonAdapter extends BaseAdapter {
       case 'pytest':
         return [
           {
-            pattern: /FAILED\s+(.+?)::(.+?)(?:\[.+?\])?\s+-/,
+            pattern: /FAILED\s+([^\s]+::[^\s]+)(?:\[.+?\])?/g,
             type: 'failure',
-            extractLocation: (match) => ({
-              file: match[1],
-              line: undefined
-            })
+            extractLocation: (match) => {
+              // Store full pytest identifier for later use
+              return {
+                file: match[1], // Keep full format for now
+                line: undefined
+              };
+            }
           },
           {
-            pattern: /(.+?):(\d+):\s+(.+)/,
-            type: 'failure',
-            extractLocation: (match) => ({
-              file: match[1],
-              line: parseInt(match[2], 10)
-            })
-          },
-          {
-            pattern: /^(.+?):\d+:\s+in\s+(.+)/m,
-            type: 'failure',
-            extractLocation: (match) => ({
-              file: match[1],
-              line: undefined
-            })
-          },
-          {
-            pattern: /ERROR\s+(.+?)::(.+?)(?:\[.+?\])?\s+-/,
+            pattern: /ERROR\s+([^\s]+::[^\s]+)(?:\[.+?\])?/g,
             type: 'error',
-            extractLocation: (match) => ({
-              file: match[1],
-              line: undefined
-            })
+            extractLocation: (match) => {
+              // Store full pytest identifier for later use
+              return {
+                file: match[1], // Keep full format for now
+                line: undefined
+              };
+            }
           }
         ];
         
       case 'unittest':
         return [
           {
-            pattern: /FAIL:\s+(.+?)\s+\((.+?)\)/,
-            type: 'failure',
-            extractLocation: (match) => {
-              const moduleMatch = match[2].match(/(.+?)\.(.+)/);
-              if (moduleMatch) {
-                const filePath = moduleMatch[1].replace(/\./g, '/') + '.py';
-                return {
-                  file: filePath,
-                  line: undefined
-                };
-              }
-              return { file: match[2], line: undefined };
-            }
-          },
-          {
-            pattern: /ERROR:\s+(.+?)\s+\((.+?)\)/,
-            type: 'error',
-            extractLocation: (match) => {
-              const moduleMatch = match[2].match(/(.+?)\.(.+)/);
-              if (moduleMatch) {
-                const filePath = moduleMatch[1].replace(/\./g, '/') + '.py';
-                return {
-                  file: filePath,
-                  line: undefined
-                };
-              }
-              return { file: match[2], line: undefined };
-            }
-          },
-          {
-            pattern: /File\s+"(.+?)",\s+line\s+(\d+)/,
+            pattern: /FAIL:\s+(.+?)\s+\((.+?)\)/g,
             type: 'failure',
             extractLocation: (match) => ({
-              file: match[1],
-              line: parseInt(match[2], 10)
+              file: match[1] + ' (' + match[2] + ')',
+              line: undefined
+            })
+          },
+          {
+            pattern: /ERROR:\s+(.+?)\s+\((.+?)\)/g,
+            type: 'error',
+            extractLocation: (match) => ({
+              file: match[1] + ' (' + match[2] + ')',
+              line: undefined
             })
           }
         ];
@@ -174,41 +170,19 @@ export class PythonAdapter extends BaseAdapter {
       case 'django':
         return [
           {
-            pattern: /FAIL:\s+(.+?)\s+\((.+?)\)/,
-            type: 'failure',
-            extractLocation: (match) => {
-              const moduleMatch = match[2].match(/(.+?)\.(.+)/);
-              if (moduleMatch) {
-                const filePath = moduleMatch[1].replace(/\./g, '/') + '.py';
-                return {
-                  file: filePath,
-                  line: undefined
-                };
-              }
-              return { file: match[2], line: undefined };
-            }
-          },
-          {
-            pattern: /ERROR:\s+(.+?)\s+\((.+?)\)/,
-            type: 'error',
-            extractLocation: (match) => {
-              const moduleMatch = match[2].match(/(.+?)\.(.+)/);
-              if (moduleMatch) {
-                const filePath = moduleMatch[1].replace(/\./g, '/') + '.py';
-                return {
-                  file: filePath,
-                  line: undefined
-                };
-              }
-              return { file: match[2], line: undefined };
-            }
-          },
-          {
-            pattern: /File\s+"(.+?)",\s+line\s+(\d+)/,
+            pattern: /FAIL:\s+(.+?)\s+\((.+?)\)/g,
             type: 'failure',
             extractLocation: (match) => ({
-              file: match[1],
-              line: parseInt(match[2], 10)
+              file: match[1] + ' (' + match[2] + ')',
+              line: undefined
+            })
+          },
+          {
+            pattern: /ERROR:\s+(.+?)\s+\((.+?)\)/g,
+            type: 'error',
+            extractLocation: (match) => ({
+              file: match[1] + ' (' + match[2] + ')',
+              line: undefined
             })
           }
         ];
@@ -216,34 +190,20 @@ export class PythonAdapter extends BaseAdapter {
       case 'nose2':
         return [
           {
-            pattern: /FAIL:\s+(.+?)\s+\((.+?)\)/,
+            pattern: /FAIL:\s+(.+\.\w+)/g,
             type: 'failure',
-            extractLocation: (match) => {
-              const moduleMatch = match[2].match(/(.+?)\.(.+)/);
-              if (moduleMatch) {
-                const filePath = moduleMatch[1].replace(/\./g, '/') + '.py';
-                return {
-                  file: filePath,
-                  line: undefined
-                };
-              }
-              return { file: match[2], line: undefined };
-            }
+            extractLocation: (match) => ({
+              file: match[1],
+              line: undefined
+            })
           },
           {
-            pattern: /ERROR:\s+(.+?)\s+\((.+?)\)/,
+            pattern: /ERROR:\s+(.+\.\w+)/g,
             type: 'error',
-            extractLocation: (match) => {
-              const moduleMatch = match[2].match(/(.+?)\.(.+)/);
-              if (moduleMatch) {
-                const filePath = moduleMatch[1].replace(/\./g, '/') + '.py';
-                return {
-                  file: filePath,
-                  line: undefined
-                };
-              }
-              return { file: match[2], line: undefined };
-            }
+            extractLocation: (match) => ({
+              file: match[1],
+              line: undefined
+            })
           }
         ];
         
@@ -254,12 +214,41 @@ export class PythonAdapter extends BaseAdapter {
   
   parseTestOutput(output: string, framework: string): ParsedTestOutput {
     const patterns = this.getFailurePatterns(framework);
-    const failures = this.extractFailures(output, patterns);
-    const errors = this.extractErrors(output, patterns);
+    const rawFailures = this.extractFailures(output, patterns);
+    const rawErrors = this.extractErrors(output, patterns);
     const summary = this.extractPythonSummary(output, framework);
     
-    const passed = failures.length === 0 && errors.length === 0;
-    const failingTests = [...new Set(failures.map(f => f.file))];
+    const passed = rawFailures.length === 0 && rawErrors.length === 0;
+    
+    // For pytest, separate file path from test identifier
+    let failures: ParsedTestOutput['failures'];
+    let errors: ParsedTestOutput['errors'];
+    let failingTests: string[];
+    
+    if (framework === 'pytest') {
+      // For failures array, extract just the file path
+      failures = rawFailures.map(f => ({
+        ...f,
+        file: f.file.includes('::') ? f.file.split('::')[0] : f.file
+      }));
+      errors = rawErrors.map(e => ({
+        ...e,
+        file: e.file.includes('::') ? e.file.split('::')[0] : e.file
+      }));
+      
+      // For failingTests, keep the full pytest format
+      failingTests = [...new Set([
+        ...rawFailures.map(f => f.file),
+        ...rawErrors.map(e => e.file)
+      ])];
+    } else {
+      failures = rawFailures;
+      errors = rawErrors;
+      failingTests = [...new Set([
+        ...failures.map(f => f.line ? `${f.file}:${f.line}` : f.file),
+        ...errors.map(e => e.line ? `${e.file}:${e.line}` : e.file)
+      ])];
+    }
     
     return {
       passed,

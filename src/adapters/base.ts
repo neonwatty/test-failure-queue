@@ -27,6 +27,7 @@ export interface TestFailure {
 export interface TestError {
   name: string;
   file: string;
+  line?: number;
   message: string;
   stack?: string;
 }
@@ -65,6 +66,7 @@ export abstract class BaseAdapter implements LanguageAdapter {
   
   protected extractFailures(output: string, patterns: TestPattern[]): TestFailure[] {
     const failures: TestFailure[] = [];
+    const seen = new Set<string>();
     
     for (const pattern of patterns) {
       if (pattern.type !== 'failure') continue;
@@ -77,12 +79,16 @@ export abstract class BaseAdapter implements LanguageAdapter {
           if (pattern.extractLocation) {
             const location = pattern.extractLocation(match);
             if (location.file) {
-              failures.push({
-                name: match[0],
-                file: location.file,
-                line: location.line,
-                message: match[0]
-              });
+              const key = `${location.file}:${location.line || 'unknown'}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                failures.push({
+                  name: match[0],
+                  file: location.file,
+                  line: location.line,
+                  message: match[0]
+                });
+              }
             }
           }
         }
@@ -94,12 +100,16 @@ export abstract class BaseAdapter implements LanguageAdapter {
           if (match && pattern.extractLocation) {
             const location = pattern.extractLocation(match);
             if (location.file) {
-              failures.push({
-                name: match[0],
-                file: location.file,
-                line: location.line,
-                message: line
-              });
+              const key = `${location.file}:${location.line || 'unknown'}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                failures.push({
+                  name: match[0],
+                  file: location.file,
+                  line: location.line,
+                  message: line
+                });
+              }
             }
           }
         }
@@ -111,6 +121,7 @@ export abstract class BaseAdapter implements LanguageAdapter {
   
   protected extractErrors(output: string, patterns: TestPattern[]): TestError[] {
     const errors: TestError[] = [];
+    const seen = new Set<string>();
     
     for (const pattern of patterns) {
       if (pattern.type !== 'error') continue;
@@ -123,11 +134,16 @@ export abstract class BaseAdapter implements LanguageAdapter {
           if (pattern.extractLocation) {
             const location = pattern.extractLocation(match);
             if (location.file) {
-              errors.push({
-                name: match[0],
-                file: location.file,
-                message: match[0]
-              });
+              const key = `${location.file}:${location.line || 'unknown'}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                errors.push({
+                  name: match[0],
+                  file: location.file,
+                  line: location.line,
+                  message: match[0]
+                });
+              }
             }
           }
         }
@@ -139,11 +155,16 @@ export abstract class BaseAdapter implements LanguageAdapter {
           if (match && pattern.extractLocation) {
             const location = pattern.extractLocation(match);
             if (location.file) {
-              errors.push({
-                name: match[0],
-                file: location.file,
-                message: line
-              });
+              const key = `${location.file}:${location.line || 'unknown'}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                errors.push({
+                  name: match[0],
+                  file: location.file,
+                  line: location.line,
+                  message: line
+                });
+              }
             }
           }
         }
