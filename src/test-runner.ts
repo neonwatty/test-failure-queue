@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import { TestLanguage, TestFramework, TestRunResult, TestRunnerOptions } from './types';
 import { adapterRegistry } from './adapters/registry';
 import { LanguageAdapter } from './adapters/base';
+import { ConfigManager } from './config';
 
 export class TestRunner {
   private language: TestLanguage;
@@ -10,6 +11,8 @@ export class TestRunner {
   private adapter: LanguageAdapter;
 
   constructor(options: TestRunnerOptions = {}) {
+    const config = ConfigManager.getInstance();
+    
     if (options.autoDetect) {
       const detectedLanguage = adapterRegistry.detectLanguage();
       if (!detectedLanguage) {
@@ -20,14 +23,15 @@ export class TestRunner {
       
       const detectedFramework = this.adapter.detectFramework();
       if (!detectedFramework) {
-        this.framework = this.adapter.defaultFramework;
+        this.framework = config.getDefaultFramework(this.language) || this.adapter.defaultFramework;
       } else {
         this.framework = detectedFramework;
       }
     } else {
-      this.language = options.language || 'javascript';
+      // Use config defaults if not specified in options
+      this.language = options.language || config.getDefaultLanguage() || 'javascript';
       this.adapter = adapterRegistry.get(this.language);
-      this.framework = options.framework || this.adapter.defaultFramework;
+      this.framework = options.framework || config.getDefaultFramework(this.language) || this.adapter.defaultFramework;
     }
 
     if (!this.adapter.supportedFrameworks.includes(this.framework)) {
@@ -37,7 +41,9 @@ export class TestRunner {
       );
     }
 
-    this.command = options.command || this.adapter.getTestCommand(this.framework);
+    // Check for custom test command in config
+    const configCommand = config.getTestCommand(this.language, this.framework);
+    this.command = options.command || configCommand || this.adapter.getTestCommand(this.framework);
   }
 
   run(): TestRunResult {

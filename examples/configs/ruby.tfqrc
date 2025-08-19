@@ -1,0 +1,19 @@
+{
+  "databasePath": "~/.tfq/queue.db",
+  "defaultPriority": 0,
+  "autoCleanup": false,
+  "maxRetries": 3,
+  "verbose": false,
+  "jsonOutput": false,
+  "colorOutput": true,
+  "defaultLanguage": "ruby",
+  "defaultFrameworks": {
+    "ruby": "minitest"
+  },
+  "testCommands": {
+    "ruby:minitest": "rails test",
+    "ruby:rspec": "bundle exec rspec",
+    "ruby:test-unit": "ruby -I test",
+    "ruby:cucumber": "bundle exec cucumber"
+  }
+}

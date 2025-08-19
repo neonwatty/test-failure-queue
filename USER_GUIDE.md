@@ -537,7 +537,27 @@ done
 
 ## Configuration
 
-TFQ supports configuration files to set default options without having to pass them via CLI or programmatic API.
+TFQ supports configuration files to set default options without having to pass them via CLI or programmatic API. Configuration is especially useful for multi-language projects where you want to set default languages, frameworks, and custom test commands.
+
+### Using Configuration for Multi-Language Support
+
+With configuration files, you can:
+- Set a default language for your project
+- Specify preferred test frameworks for each language
+- Define custom test commands for specific framework combinations
+- Avoid repetitive CLI flags
+
+Example workflow with configuration:
+```bash
+# Without config (verbose)
+tfq run-tests --language python --framework pytest
+
+# With config setting defaultLanguage: "python"
+tfq run-tests  # Automatically uses Python/pytest
+
+# Override config when needed
+tfq run-tests --language ruby --framework rspec
+```
 
 ### Configuration File Locations
 
@@ -558,7 +578,26 @@ The library searches for configuration files in the following order (first found
   "maxRetries": 3,                     // Maximum retry attempts
   "verbose": false,                    // Enable verbose output
   "jsonOutput": false,                 // Default to JSON output
-  "colorOutput": true                  // Enable colored output
+  "colorOutput": true,                 // Enable colored output
+  
+  // Language-specific options
+  "defaultLanguage": "javascript",     // Default language when not specified
+  "defaultFrameworks": {                // Default framework for each language
+    "javascript": "jest",
+    "ruby": "minitest",
+    "python": "pytest",
+    "go": "go",
+    "java": "junit"
+  },
+  "testCommands": {                     // Custom test commands per language:framework
+    "javascript:jest": "npm test",
+    "javascript:mocha": "npx mocha",
+    "javascript:vitest": "npx vitest run",
+    "ruby:minitest": "rails test",
+    "ruby:rspec": "bundle exec rspec",
+    "python:pytest": "pytest",
+    "python:unittest": "python -m unittest"
+  }
 }
 ```
 
@@ -576,6 +615,23 @@ tfq config --path
 
 # Use custom config file
 tfq --config /path/to/config.json add test.js
+```
+
+### Pre-built Configuration Examples
+
+The TFQ package includes example configuration files in the `examples/configs/` directory:
+- `javascript.tfqrc` - JavaScript/TypeScript project defaults
+- `python.tfqrc` - Python project defaults  
+- `ruby.tfqrc` - Ruby/Rails project defaults
+- `multi-language.tfqrc` - Multi-language project setup
+
+Copy and customize these for your project:
+```bash
+# Copy JavaScript config example
+cp node_modules/tfq/examples/configs/javascript.tfqrc .tfqrc
+
+# Or for global installation
+cp $(npm root -g)/tfq/examples/configs/python.tfqrc ~/.tfqrc
 ```
 
 ### Programmatic Configuration
@@ -607,15 +663,88 @@ When multiple configuration sources are available, they are applied in this orde
 2. Configuration file
 3. Command-line arguments or programmatic options
 
+For language and framework selection, the precedence is:
+1. CLI flags (`--language`, `--framework`)
+2. Configuration file (`defaultLanguage`, `defaultFrameworks`)
+3. Auto-detection (`--auto-detect`)
+4. Built-in defaults (JavaScript/Jest)
+
+For test commands, the precedence is:
+1. CLI command argument
+2. Configuration file `testCommands`
+3. Adapter default commands
+
 ### Example Configuration Files
 
-**Development Configuration** (`.tfqrc`):
+**JavaScript Project** (`.tfqrc`):
 ```json
 {
   "databasePath": "./test-queue.db",
   "defaultPriority": 0,
   "verbose": true,
-  "colorOutput": true
+  "colorOutput": true,
+  "defaultLanguage": "javascript",
+  "defaultFrameworks": {
+    "javascript": "jest"
+  },
+  "testCommands": {
+    "javascript:jest": "npm run test:unit",
+    "javascript:mocha": "npm run test:integration",
+    "javascript:vitest": "npm run test:e2e"
+  }
+}
+```
+
+**Python Project** (`.tfqrc`):
+```json
+{
+  "databasePath": "~/.tfq/python-queue.db",
+  "defaultLanguage": "python",
+  "defaultFrameworks": {
+    "python": "pytest"
+  },
+  "testCommands": {
+    "python:pytest": "python -m pytest -v",
+    "python:unittest": "python -m unittest discover",
+    "python:django": "python manage.py test --parallel"
+  }
+}
+```
+
+**Ruby/Rails Project** (`.tfqrc`):
+```json
+{
+  "databasePath": "~/.tfq/rails-queue.db",
+  "defaultLanguage": "ruby",
+  "defaultFrameworks": {
+    "ruby": "minitest"
+  },
+  "testCommands": {
+    "ruby:minitest": "rails test",
+    "ruby:rspec": "bundle exec rspec --format progress",
+    "ruby:cucumber": "bundle exec cucumber --format progress"
+  }
+}
+```
+
+**Multi-Language Project** (`.tfqrc`):
+```json
+{
+  "databasePath": "./multi-project-queue.db",
+  "defaultLanguage": "javascript",
+  "defaultFrameworks": {
+    "javascript": "jest",
+    "python": "pytest",
+    "ruby": "rspec"
+  },
+  "testCommands": {
+    "javascript:jest": "npm test",
+    "javascript:vitest": "pnpm test",
+    "python:pytest": "poetry run pytest",
+    "python:django": "python manage.py test",
+    "ruby:rspec": "bundle exec rspec",
+    "ruby:minitest": "rails test"
+  }
 }
 ```
 
@@ -625,7 +754,13 @@ When multiple configuration sources are available, they are applied in this orde
   "databasePath": "/tmp/tfq-queue.db",
   "jsonOutput": true,
   "colorOutput": false,
-  "autoCleanup": true
+  "autoCleanup": true,
+  "defaultLanguage": "javascript",
+  "testCommands": {
+    "javascript:jest": "npm run test:ci",
+    "python:pytest": "pytest --cov --junit-xml=report.xml",
+    "ruby:rspec": "bundle exec rspec --format RspecJunitFormatter"
+  }
 }
 ```
 

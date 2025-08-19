@@ -1,0 +1,20 @@
+{
+  "databasePath": "~/.tfq/queue.db",
+  "defaultPriority": 0,
+  "autoCleanup": false,
+  "maxRetries": 3,
+  "verbose": false,
+  "jsonOutput": false,
+  "colorOutput": true,
+  "defaultLanguage": "javascript",
+  "defaultFrameworks": {
+    "javascript": "jest"
+  },
+  "testCommands": {
+    "javascript:jest": "npm test",
+    "javascript:mocha": "npx mocha",
+    "javascript:vitest": "npx vitest run",
+    "javascript:jasmine": "npx jasmine",
+    "javascript:ava": "npx ava"
+  }
+}

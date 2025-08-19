@@ -1,0 +1,19 @@
+{
+  "databasePath": "~/.tfq/queue.db",
+  "defaultPriority": 0,
+  "autoCleanup": false,
+  "maxRetries": 3,
+  "verbose": false,
+  "jsonOutput": false,
+  "colorOutput": true,
+  "defaultLanguage": "python",
+  "defaultFrameworks": {
+    "python": "pytest"
+  },
+  "testCommands": {
+    "python:pytest": "pytest",
+    "python:unittest": "python -m unittest",
+    "python:django": "python manage.py test",
+    "python:nose2": "nose2"
+  }
+}

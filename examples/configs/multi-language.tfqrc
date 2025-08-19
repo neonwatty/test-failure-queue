@@ -1,0 +1,32 @@
+{
+  "databasePath": "~/.tfq/queue.db",
+  "defaultPriority": 0,
+  "autoCleanup": false,
+  "maxRetries": 3,
+  "verbose": false,
+  "jsonOutput": false,
+  "colorOutput": true,
+  "defaultLanguage": "javascript",
+  "defaultFrameworks": {
+    "javascript": "jest",
+    "ruby": "rspec",
+    "python": "pytest",
+    "go": "go",
+    "java": "junit"
+  },
+  "testCommands": {
+    "javascript:jest": "npm test",
+    "javascript:mocha": "npx mocha",
+    "javascript:vitest": "npx vitest run",
+    "javascript:jasmine": "npx jasmine",
+    "javascript:ava": "npx ava",
+    "ruby:minitest": "rails test",
+    "ruby:rspec": "bundle exec rspec",
+    "ruby:test-unit": "ruby -I test",
+    "ruby:cucumber": "bundle exec cucumber",
+    "python:pytest": "pytest",
+    "python:unittest": "python -m unittest",
+    "python:django": "python manage.py test",
+    "python:nose2": "nose2"
+  }
+}
