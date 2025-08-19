@@ -4,5 +4,7 @@ export {
   QueueItem, 
   QueueStatistics, 
   DatabaseConfig, 
-  QueueOptions 
+  QueueOptions,
+  ConfigFile
 } from './types';
+export { ConfigManager, loadConfig } from './config';

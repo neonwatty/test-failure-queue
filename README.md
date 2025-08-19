@@ -1,10 +1,10 @@
-# Test Failure Queue
+# TFQ (Test Failure Queue)
 
 A TypeScript library for managing failed test files in a persistent queue using SQLite.
 
 ## Overview
 
-Test Failure Queue (TFQ) is a command-line tool designed to help developers efficiently manage and retry failed tests. It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
+TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests. It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
 
 ## Features
 
@@ -18,13 +18,13 @@ Test Failure Queue (TFQ) is a command-line tool designed to help developers effi
 ## Installation
 
 ```bash
-npm install test-failure-queue
+npm install tfq
 ```
 
 Or install globally:
 
 ```bash
-npm install -g test-failure-queue
+npm install -g tfq
 ```
 
 ## Usage
@@ -70,7 +70,7 @@ tfq stats --json
 ### Programmatic API
 
 ```typescript
-import { TestFailureQueue } from 'test-failure-queue';
+import { TestFailureQueue } from 'tfq';
 
 const queue = new TestFailureQueue();
 
@@ -97,7 +97,7 @@ console.log(`Total failures: ${stats.totalItems}`);
 ## Configuration
 
 The queue database is stored in your home directory by default:
-- Location: `~/.test-failure-queue.db`
+- Location: `~/.tfq/queue.db`
 
 You can also use a project-specific database by setting the `TFQ_DB_PATH` environment variable:
 
@@ -153,7 +153,7 @@ npm test
 ### Project Structure
 
 ```
-test-failure-queue/
+tfq/
 ├── src/
 │   ├── index.ts       # Main exports
 │   ├── queue.ts       # Queue implementation

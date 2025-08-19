@@ -1,4 +1,4 @@
-import { TestFailureQueue } from './queue';
+import { TestFailureQueue } from '../src/queue';
 import * as fs from 'fs';
 import * as path from 'path';
 

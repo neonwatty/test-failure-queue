@@ -1,4 +1,4 @@
-# Test Failure Queue - User Guide
+# TFQ (Test Failure Queue) - User Guide
 
 A TypeScript library for managing failed test files in a persistent SQLite queue. Perfect for both human developers and AI agents like Claude Code to track and process test failures systematically.
 
@@ -15,18 +15,24 @@ A TypeScript library for managing failed test files in a persistent SQLite queue
 
 ### Global Installation (Recommended for CLI)
 ```bash
-npm install -g test-failure-queue
+npm install -g tfq
 ```
 
 ### Local Installation (For programmatic use)
 ```bash
-npm install test-failure-queue
+npm install tfq
 ```
 
 ## Quick Start
 
 ```bash
-# Add a failed test to the queue
+# Run tests and detect failures
+tfq run-tests
+
+# Run tests and automatically add failures to queue
+tfq run-tests --auto-add
+
+# Add a failed test to the queue manually
 tfq add tests/user.test.ts
 
 # Get the next test to fix
@@ -41,7 +47,30 @@ tfq stats
 
 ## CLI Usage for Humans
 
-### Adding Failed Tests
+### Running Tests and Detecting Failures
+
+Run tests with automatic failure detection:
+```bash
+# Run default test command (npm test) with Jest
+tfq run-tests
+
+# Run custom test command
+tfq run-tests "npm run test:integration"
+
+# Specify test framework (jest, mocha, vitest)
+tfq run-tests --framework mocha
+
+# Automatically add failures to queue
+tfq run-tests --auto-add
+
+# Add failures with priority
+tfq run-tests --auto-add --priority 10
+
+# Run integration tests with Mocha and auto-add failures
+tfq run-tests "npm run test:integration" --framework mocha --auto-add --priority 5
+```
+
+### Adding Failed Tests Manually
 
 Add a single test file:
 ```bash
@@ -120,6 +149,34 @@ tfq stats
 
 All commands support `--json` flag for machine-readable output.
 
+### Running Tests (JSON Mode)
+
+```bash
+tfq run-tests --json
+```
+
+Output:
+```json
+{
+  "success": false,
+  "exitCode": 1,
+  "failingTests": [
+    "src/tests/auth.test.ts",
+    "src/tests/api.test.ts"
+  ],
+  "totalFailures": 2,
+  "duration": 3500,
+  "framework": "jest",
+  "command": "npm test",
+  "error": null
+}
+```
+
+Run with auto-add:
+```bash
+tfq run-tests --auto-add --priority 5 --json
+```
+
 ### Adding Tests (JSON Mode)
 
 ```bash
@@ -191,6 +248,9 @@ Output:
 ### AI Agent Integration Example
 
 ```bash
+# Run tests and automatically populate queue
+tfq run-tests --auto-add --priority 5 --json
+
 # Check if queue has items
 RESULT=$(tfq list --json)
 COUNT=$(echo $RESULT | jq '.count')
@@ -214,7 +274,7 @@ fi
 ### TypeScript Usage
 
 ```typescript
-import { TestFailureQueue } from 'test-failure-queue';
+import { TestFailureQueue } from 'tfq';
 
 // Initialize queue
 const queue = new TestFailureQueue({
@@ -254,7 +314,7 @@ queue.close();
 ### JavaScript Usage
 
 ```javascript
-const { TestFailureQueue } = require('test-failure-queue');
+const { TestFailureQueue } = require('tfq');
 
 const queue = new TestFailureQueue();
 
@@ -275,7 +335,7 @@ if (next) {
 ### Example 1: Test Runner Integration
 
 ```typescript
-import { TestFailureQueue } from 'test-failure-queue';
+import { TestFailureQueue } from 'tfq';
 import { runTests } from './test-runner';
 
 const queue = new TestFailureQueue();
@@ -304,12 +364,12 @@ async function processFailedTests() {
 ```bash
 #!/bin/bash
 
-# Add all failed Jest tests to queue
-jest --listTests --findRelatedTests $(git diff --name-only) | while read test; do
-  if ! jest "$test" 2>/dev/null; then
-    tfq add "$test" --json
-  fi
-done
+# Run all tests and automatically add failures to queue
+tfq run-tests --auto-add --priority 5
+
+# Or run specific test suites with different frameworks
+tfq run-tests "npm run test:unit" --framework jest --auto-add
+tfq run-tests "npm run test:integration" --framework mocha --auto-add --priority 10
 
 # Process queue
 while true; do
@@ -329,10 +389,12 @@ done
 When using with Claude Code or other AI agents:
 
 ```bash
-# Collect failed tests
-tfq add tests/auth.test.ts --priority 10
-tfq add tests/user.test.ts --priority 5
-tfq add tests/utils.test.ts
+# Automatically detect and queue failed tests
+tfq run-tests --auto-add --priority 5
+
+# Or run different test suites
+tfq run-tests "npm run test:unit" --auto-add
+tfq run-tests "npm run test:e2e" --framework mocha --auto-add --priority 10
 
 # Get summary for AI
 tfq list --json > failed-tests.json
@@ -343,6 +405,100 @@ while [ $(tfq list --json | jq '.count') -gt 0 ]; do
   echo "Claude, please fix the test at: $TEST"
   # AI fixes the test...
 done
+```
+
+## Configuration
+
+TFQ supports configuration files to set default options without having to pass them via CLI or programmatic API.
+
+### Configuration File Locations
+
+The library searches for configuration files in the following order (first found wins):
+
+1. Custom path specified via `--config` flag
+2. `./.tfqrc` - Project-local configuration
+3. `~/.tfqrc` - User home directory configuration
+4. `~/.tfq/config.json` - Alternative location in TFQ directory
+
+### Configuration Options
+
+```json
+{
+  "databasePath": "~/.tfq/queue.db",  // Database file location
+  "defaultPriority": 0,                // Default priority for new items
+  "autoCleanup": false,                // Auto-cleanup old items
+  "maxRetries": 3,                     // Maximum retry attempts
+  "verbose": false,                    // Enable verbose output
+  "jsonOutput": false,                 // Default to JSON output
+  "colorOutput": true                  // Enable colored output
+}
+```
+
+### CLI Configuration Management
+
+```bash
+# Create default config file in current directory
+tfq config --init
+
+# Show current configuration
+tfq config --show
+
+# Show config file path being used
+tfq config --path
+
+# Use custom config file
+tfq --config /path/to/config.json add test.js
+```
+
+### Programmatic Configuration
+
+```typescript
+import { TestFailureQueue, ConfigManager, loadConfig } from 'tfq';
+
+// Load config from default locations
+const config = loadConfig();
+
+// Load config from custom path
+const customConfig = loadConfig('/path/to/config.json');
+
+// Create queue with config
+const queue = new TestFailureQueue({
+  configPath: '/path/to/config.json'
+});
+
+// Use ConfigManager directly
+const manager = new ConfigManager('/path/to/config.json');
+const currentConfig = manager.getConfig();
+```
+
+### Configuration Precedence
+
+When multiple configuration sources are available, they are applied in this order (later overrides earlier):
+
+1. Default values
+2. Configuration file
+3. Command-line arguments or programmatic options
+
+### Example Configuration Files
+
+**Development Configuration** (`.tfqrc`):
+```json
+{
+  "databasePath": "./test-queue.db",
+  "defaultPriority": 0,
+  "verbose": true,
+  "colorOutput": true
+}
+```
+
+**CI/CD Configuration** (`.tfqrc`):
+```json
+{
+  "databasePath": "/tmp/tfq-queue.db",
+  "jsonOutput": true,
+  "colorOutput": false,
+  "autoCleanup": true
+}
 ```
 
 ## Troubleshooting

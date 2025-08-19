@@ -1,8 +1,14 @@
+# local
+.claude/
+.mcp.json
+*CLAUDE.md
+
 # Dependencies
 node_modules/
 
 # Build output
 dist/
+*.db
 
 # Test coverage
 coverage/

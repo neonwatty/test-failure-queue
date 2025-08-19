@@ -1,14 +1,25 @@
 import { TestDatabase } from './database';
 import { QueueItem, QueueOptions, QueueStatistics } from './types';
 import { minimatch } from 'minimatch';
+import { loadConfig } from './config';
 
 export class TestFailureQueue {
   private db: TestDatabase;
+  private options: QueueOptions;
 
   constructor(options: QueueOptions = {}) {
+    const config = loadConfig(options.configPath);
+    
+    this.options = {
+      databasePath: options.databasePath || config.databasePath,
+      autoCleanup: options.autoCleanup ?? config.autoCleanup,
+      maxRetries: options.maxRetries ?? config.maxRetries,
+      configPath: options.configPath
+    };
+    
     this.db = new TestDatabase({
-      path: options.databasePath,
-      verbose: false
+      path: this.options.databasePath,
+      verbose: config.verbose || false
     });
   }
 

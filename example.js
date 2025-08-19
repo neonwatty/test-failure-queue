@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Example usage of test-failure-queue library
+// Example usage of tfq library
 // Run with: node example.js
 
 const { TestFailureQueue } = require('./dist/index.js');

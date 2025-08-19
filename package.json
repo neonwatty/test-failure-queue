@@ -1,5 +1,5 @@
 {
-  "name": "test-failure-queue",
+  "name": "tfq",
   "version": "1.0.0",
   "description": "A TypeScript library for managing failed test files in a persistent queue",
   "main": "dist/index.js",
