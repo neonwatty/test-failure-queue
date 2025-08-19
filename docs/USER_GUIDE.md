@@ -54,6 +54,215 @@ tfq list
 tfq stats
 ```
 
+## Language-Specific Guides
+
+### JavaScript/TypeScript
+
+#### Supported Frameworks
+- **Jest** (default): Facebook's testing framework
+- **Mocha**: Flexible testing framework
+- **Vitest**: Vite-native test runner
+- **Jasmine**: Behavior-driven testing framework
+- **AVA**: Minimal and fast test runner
+
+#### Auto-Detection
+TFQ automatically detects JavaScript projects by checking:
+1. `package.json` dependencies and devDependencies
+2. Test file patterns (*.test.js, *.spec.ts, etc.)
+3. Common test directories (test/, tests/, __tests__/)
+
+#### Common Commands
+```bash
+# Auto-detect framework from package.json
+tfq run-tests --auto-detect
+
+# Run with specific framework
+tfq run-tests --language javascript --framework jest
+tfq run-tests --language javascript --framework mocha
+tfq run-tests --language javascript --framework vitest
+
+# Custom test scripts
+tfq run-tests "npm run test:unit" --language javascript
+tfq run-tests "yarn test" --language javascript --framework jest
+tfq run-tests "pnpm test" --language javascript --framework vitest
+```
+
+#### Configuration Example
+```json
+{
+  "defaultLanguage": "javascript",
+  "defaultFrameworks": {
+    "javascript": "jest"
+  },
+  "testCommands": {
+    "javascript:jest": "npm test",
+    "javascript:mocha": "npm run test:mocha",
+    "javascript:vitest": "pnpm test"
+  }
+}
+```
+
+### Ruby/Rails
+
+#### Supported Frameworks
+- **Minitest**: Ruby's built-in testing library, default for Rails
+- **RSpec**: BDD framework for Ruby
+- **Test::Unit**: Traditional unit testing framework
+- **Cucumber**: BDD acceptance testing
+
+#### Auto-Detection
+TFQ automatically detects Ruby projects by checking:
+1. `Gemfile` for testing gems
+2. Presence of `spec/` directory (RSpec)
+3. Presence of `test/` directory (Minitest/Test::Unit)
+4. Rails project structure
+
+#### Common Commands
+```bash
+# Auto-detect framework from Gemfile
+tfq run-tests --language ruby --auto-detect
+
+# Rails with Minitest
+tfq run-tests "rails test" --language ruby --framework minitest
+tfq run-tests "rails test test/models" --language ruby --framework minitest
+
+# RSpec
+tfq run-tests --language ruby --framework rspec
+tfq run-tests "bundle exec rspec spec/models" --language ruby --framework rspec
+
+# Cucumber features
+tfq run-tests "bundle exec cucumber" --language ruby --framework cucumber
+```
+
+#### Configuration Example
+```json
+{
+  "defaultLanguage": "ruby",
+  "defaultFrameworks": {
+    "ruby": "rspec"
+  },
+  "testCommands": {
+    "ruby:minitest": "rails test",
+    "ruby:rspec": "bundle exec rspec",
+    "ruby:cucumber": "bundle exec cucumber"
+  }
+}
+```
+
+### Python
+
+#### Supported Frameworks
+- **pytest** (default): Feature-rich testing framework
+- **unittest**: Python's built-in testing framework
+- **Django**: Django's test runner
+- **nose2**: unittest extension
+
+#### Auto-Detection
+TFQ automatically detects Python projects by checking:
+1. `requirements.txt`, `setup.py`, or `pyproject.toml`
+2. Presence of pytest.ini or setup.cfg with pytest configuration
+3. Django's manage.py file
+4. Test file patterns (test_*.py, *_test.py)
+
+#### Common Commands
+```bash
+# Auto-detect framework
+tfq run-tests --language python --auto-detect
+
+# pytest
+tfq run-tests --language python --framework pytest
+tfq run-tests "pytest tests/unit" --language python --framework pytest
+tfq run-tests "python -m pytest -v" --language python --framework pytest
+
+# unittest
+tfq run-tests "python -m unittest" --language python --framework unittest
+tfq run-tests "python -m unittest discover" --language python --framework unittest
+
+# Django
+tfq run-tests "python manage.py test" --language python --framework django
+tfq run-tests "./manage.py test apps.users" --language python --framework django
+
+# nose2
+tfq run-tests "python -m nose2" --language python --framework nose2
+```
+
+#### Configuration Example
+```json
+{
+  "defaultLanguage": "python",
+  "defaultFrameworks": {
+    "python": "pytest"
+  },
+  "testCommands": {
+    "python:pytest": "pytest -v",
+    "python:unittest": "python -m unittest discover",
+    "python:django": "python manage.py test --parallel",
+    "python:nose2": "nose2 -v"
+  }
+}
+```
+
+## Auto-Detection Feature
+
+### How Auto-Detection Works
+
+TFQ can automatically detect both the programming language and test framework of your project:
+
+1. **Language Detection**: Examines project files (package.json, Gemfile, requirements.txt)
+2. **Framework Detection**: Checks for framework-specific dependencies and configuration
+3. **Fallback**: Uses sensible defaults if detection is uncertain
+
+### Using Auto-Detection
+
+```bash
+# Full auto-detection (language and framework)
+tfq run-tests --auto-detect
+
+# Auto-detect framework for specific language
+tfq run-tests --language javascript --auto-detect
+tfq run-tests --language python --auto-detect
+tfq run-tests --language ruby --auto-detect
+
+# Auto-detect with custom options
+tfq run-tests --auto-detect --auto-add --priority 5
+```
+
+### Detection Priority
+
+When multiple frameworks are detected, TFQ uses this priority:
+
+**JavaScript:**
+1. Jest (if jest in dependencies)
+2. Vitest (if vitest in dependencies)
+3. Mocha (if mocha in dependencies)
+4. Jasmine (if jasmine in dependencies)
+5. AVA (if ava in dependencies)
+
+**Python:**
+1. pytest (if pytest installed or pytest.ini exists)
+2. Django (if manage.py exists)
+3. unittest (default Python framework)
+4. nose2 (if nose2 in requirements)
+
+**Ruby:**
+1. RSpec (if rspec in Gemfile or spec/ directory exists)
+2. Minitest (if Rails project or test/ directory exists)
+3. Cucumber (if cucumber in Gemfile)
+4. Test::Unit (fallback)
+
+### Overriding Auto-Detection
+
+You can always override auto-detection:
+
+```bash
+# Force specific framework even if auto-detect would choose differently
+tfq run-tests --language javascript --framework mocha
+
+# Use configuration file to set defaults
+echo '{ "defaultLanguage": "python", "defaultFrameworks": { "python": "unittest" } }' > .tfqrc
+tfq run-tests  # Will use Python/unittest
+```
+
 ## CLI Usage for Humans
 
 ### Discovering Supported Languages and Frameworks
@@ -764,7 +973,104 @@ For test commands, the precedence is:
 }
 ```
 
-## Troubleshooting
+## Language-Specific Troubleshooting
+
+### JavaScript/TypeScript Issues
+
+**Problem: Test failures not detected**
+- Ensure your test runner exits with non-zero code on failure
+- Check that test output goes to stdout/stderr
+- Try specifying the framework explicitly: `--framework jest`
+
+**Problem: Wrong framework detected**
+```bash
+# Override auto-detection
+tfq run-tests --language javascript --framework mocha
+
+# Set in config file
+echo '{ "defaultFrameworks": { "javascript": "mocha" } }' > .tfqrc
+```
+
+**Problem: Custom test script not working**
+```bash
+# Use quoted custom commands
+tfq run-tests "npm run test:custom" --language javascript --framework jest
+```
+
+### Ruby/Rails Issues
+
+**Problem: Rails tests not detected**
+- Ensure you're in the Rails root directory
+- Use explicit command: `tfq run-tests "rails test" --language ruby --framework minitest`
+- Check that `rails` or `bundle exec` commands work
+
+**Problem: RSpec vs Minitest confusion**
+```bash
+# Force specific framework
+tfq run-tests --language ruby --framework rspec
+tfq run-tests --language ruby --framework minitest
+```
+
+**Problem: Bundle exec required**
+```bash
+# Always use bundle exec for Ruby projects
+tfq run-tests "bundle exec rspec" --language ruby --framework rspec
+tfq run-tests "bundle exec rails test" --language ruby --framework minitest
+```
+
+### Python Issues
+
+**Problem: Import errors when running tests**
+- Ensure you're in the project root with proper PYTHONPATH
+- Use module execution: `tfq run-tests "python -m pytest" --language python`
+- Activate virtual environment before running tfq
+
+**Problem: Django tests not found**
+```bash
+# Use manage.py explicitly
+tfq run-tests "python manage.py test" --language python --framework django
+tfq run-tests "./manage.py test" --language python --framework django
+```
+
+**Problem: pytest vs unittest detection**
+```bash
+# Force unittest even if pytest is installed
+tfq run-tests --language python --framework unittest
+
+# Or configure default
+echo '{ "defaultFrameworks": { "python": "unittest" } }' > .tfqrc
+```
+
+### General Auto-Detection Issues
+
+**Problem: Auto-detection chooses wrong language**
+```bash
+# Check what's detected
+tfq run-tests --auto-detect --dry-run
+
+# Force specific language
+tfq run-tests --language ruby --auto-detect  # Auto-detect only framework
+```
+
+**Problem: Multi-language project confusion**
+```bash
+# Create project-specific config
+cat > .tfqrc << EOF
+{
+  "defaultLanguage": "javascript",
+  "testCommands": {
+    "javascript:jest": "npm test",
+    "python:pytest": "python -m pytest",
+    "ruby:rspec": "bundle exec rspec"
+  }
+}
+EOF
+
+# Run tests for specific language
+tfq run-tests --language python
+```
+
+## General Troubleshooting
 
 ### Database Location
 

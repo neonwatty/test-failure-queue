@@ -50,6 +50,13 @@ npm install -g tfq
 - **Auto-detection**: via Gemfile or directory structure
 - **Default command**: `bundle exec rspec` or `rails test`
 
+## Documentation
+
+- [User Guide](./docs/USER_GUIDE.md) - Comprehensive user documentation
+- [API Documentation](./docs/API_DOCUMENTATION.md) - Technical API reference for developers
+- [Changelog](./docs/CHANGELOG.md) - Version history and changes
+- [Release Notes](./docs/RELEASE_NOTES.md) - Latest release information
+
 ## Usage
 
 ### CLI Commands

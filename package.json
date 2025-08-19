@@ -1,7 +1,7 @@
 {
   "name": "tfq",
-  "version": "1.0.0",
-  "description": "A TypeScript library for managing failed test files in a persistent queue",
+  "version": "2.0.0",
+  "description": "Multi-language test failure queue manager with support for JavaScript, Ruby, Python and more",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -20,7 +20,18 @@
     "sqlite",
     "cli",
     "testing",
-    "failure"
+    "failure",
+    "multi-language",
+    "javascript",
+    "ruby",
+    "python",
+    "jest",
+    "mocha",
+    "vitest",
+    "rspec",
+    "minitest",
+    "pytest",
+    "unittest"
   ],
   "author": "",
   "license": "MIT",
