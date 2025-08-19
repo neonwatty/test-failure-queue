@@ -1,13 +1,19 @@
 # TFQ (Test Failure Queue)
 
-A TypeScript library for managing failed test files in a persistent queue using SQLite.
+A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.
 
 ## Overview
 
-TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests. It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
+TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across multiple programming languages and test frameworks. It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
 
 ## Features
 
+- **Multi-Language Support**: JavaScript/TypeScript, Python, and Ruby
+- **Multiple Test Frameworks**: 
+  - JavaScript: Jest, Mocha, Vitest, Jasmine, AVA
+  - Python: pytest, unittest, Django, nose2
+  - Ruby: Minitest, RSpec, Test::Unit, Cucumber
+- **Auto-Detection**: Automatically detects language and test framework
 - **Persistent Storage**: Uses SQLite to maintain test failure history across sessions
 - **Priority Management**: Assign priorities to different test files
 - **Pattern Matching**: Support for glob patterns to manage multiple files at once
@@ -26,6 +32,23 @@ Or install globally:
 ```bash
 npm install -g tfq
 ```
+
+## Supported Languages
+
+### JavaScript/TypeScript
+- **Frameworks**: Jest, Mocha, Vitest, Jasmine, AVA
+- **Auto-detection**: via package.json dependencies
+- **Default command**: `npm test`
+
+### Python
+- **Frameworks**: pytest, unittest, Django test runner, nose2
+- **Auto-detection**: via requirements.txt, setup.py, or pyproject.toml
+- **Default command**: `pytest` or `python -m unittest`
+
+### Ruby
+- **Frameworks**: Minitest, RSpec, Test::Unit, Cucumber
+- **Auto-detection**: via Gemfile or directory structure
+- **Default command**: `bundle exec rspec` or `rails test`
 
 ## Usage
 

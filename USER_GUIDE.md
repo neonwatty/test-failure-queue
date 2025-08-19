@@ -50,14 +50,19 @@ tfq stats
 ### Running Tests and Detecting Failures
 
 Run tests with automatic failure detection:
+
+#### JavaScript/TypeScript
 ```bash
+# Auto-detect language and framework
+tfq run-tests --auto-detect
+
 # Run default test command (npm test) with Jest
-tfq run-tests
+tfq run-tests --language javascript --framework jest
 
 # Run custom test command
-tfq run-tests "npm run test:integration"
+tfq run-tests "npm run test:integration" --language javascript
 
-# Specify test framework (jest, mocha, vitest)
+# Specify test framework (jest, mocha, vitest, jasmine, ava)
 tfq run-tests --framework mocha
 
 # Automatically add failures to queue
@@ -68,6 +73,42 @@ tfq run-tests --auto-add --priority 10
 
 # Run integration tests with Mocha and auto-add failures
 tfq run-tests "npm run test:integration" --framework mocha --auto-add --priority 5
+```
+
+#### Python
+```bash
+# Auto-detect Python framework
+tfq run-tests --language python --auto-detect
+
+# Run pytest
+tfq run-tests --language python --framework pytest
+
+# Run unittest
+tfq run-tests "python -m unittest" --language python --framework unittest
+
+# Run Django tests
+tfq run-tests "python manage.py test" --language python --framework django
+
+# Run with auto-add
+tfq run-tests --language python --framework pytest --auto-add
+```
+
+#### Ruby
+```bash
+# Auto-detect Ruby framework
+tfq run-tests --language ruby --auto-detect
+
+# Run RSpec
+tfq run-tests --language ruby --framework rspec
+
+# Run Rails tests with Minitest
+tfq run-tests "rails test" --language ruby --framework minitest
+
+# Run Cucumber features
+tfq run-tests --language ruby --framework cucumber
+
+# Run with auto-add
+tfq run-tests --language ruby --framework rspec --auto-add --priority 5
 ```
 
 ### Adding Failed Tests Manually
@@ -152,7 +193,14 @@ All commands support `--json` flag for machine-readable output.
 ### Running Tests (JSON Mode)
 
 ```bash
-tfq run-tests --json
+# Auto-detect language and framework
+tfq run-tests --auto-detect --json
+
+# Specify language
+tfq run-tests --language python --json
+
+# Specify both language and framework
+tfq run-tests --language ruby --framework rspec --json
 ```
 
 Output:
@@ -166,6 +214,7 @@ Output:
   ],
   "totalFailures": 2,
   "duration": 3500,
+  "language": "javascript",
   "framework": "jest",
   "command": "npm test",
   "error": null
@@ -364,12 +413,19 @@ async function processFailedTests() {
 ```bash
 #!/bin/bash
 
-# Run all tests and automatically add failures to queue
-tfq run-tests --auto-add --priority 5
+# JavaScript project
+tfq run-tests --language javascript --auto-detect --auto-add --priority 5
+
+# Python project
+tfq run-tests --language python --framework pytest --auto-add
+
+# Ruby/Rails project
+tfq run-tests --language ruby --framework minitest --auto-add --priority 10
 
 # Or run specific test suites with different frameworks
 tfq run-tests "npm run test:unit" --framework jest --auto-add
-tfq run-tests "npm run test:integration" --framework mocha --auto-add --priority 10
+tfq run-tests "bundle exec rspec spec/models" --language ruby --framework rspec --auto-add
+tfq run-tests "python -m pytest tests/unit" --language python --framework pytest --auto-add
 
 # Process queue
 while true; do
@@ -389,12 +445,18 @@ done
 When using with Claude Code or other AI agents:
 
 ```bash
-# Automatically detect and queue failed tests
-tfq run-tests --auto-add --priority 5
+# Auto-detect language and framework for any project
+tfq run-tests --auto-detect --auto-add --priority 5
 
-# Or run different test suites
-tfq run-tests "npm run test:unit" --auto-add
-tfq run-tests "npm run test:e2e" --framework mocha --auto-add --priority 10
+# Or explicitly specify for different languages
+tfq run-tests --language javascript --auto-detect --auto-add
+tfq run-tests --language python --framework pytest --auto-add --priority 10
+tfq run-tests --language ruby --framework rspec --auto-add
+
+# Mixed language project example
+tfq run-tests "npm test" --language javascript --auto-add
+tfq run-tests "pytest" --language python --auto-add
+tfq run-tests "bundle exec rspec" --language ruby --auto-add
 
 # Get summary for AI
 tfq list --json > failed-tests.json

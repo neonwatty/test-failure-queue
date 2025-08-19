@@ -2,6 +2,7 @@
 .claude/
 .mcp.json
 *CLAUDE.md
+.plans/
 
 # Dependencies
 node_modules/

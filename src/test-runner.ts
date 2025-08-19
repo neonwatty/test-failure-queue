@@ -1,19 +1,43 @@
 import { execSync } from 'child_process';
-import { TestFramework, TestRunResult, TestRunnerOptions } from './types';
-
-const FRAMEWORK_PATTERNS: Record<TestFramework, RegExp> = {
-  jest: /FAIL\s+(\S+\.(?:test|spec)\.[jt]sx?)/g,
-  mocha: /\s+\d+\)\s+(.+\.(?:test|spec)\.[jt]sx?):/gm,
-  vitest: /❯\s+(\S+\.(?:test|spec)\.[jt]sx?)/g
-};
+import { TestLanguage, TestFramework, TestRunResult, TestRunnerOptions } from './types';
+import { adapterRegistry } from './adapters/registry';
+import { LanguageAdapter } from './adapters/base';
 
 export class TestRunner {
+  private language: TestLanguage;
   private framework: TestFramework;
   private command: string;
+  private adapter: LanguageAdapter;
 
   constructor(options: TestRunnerOptions = {}) {
-    this.framework = options.framework || 'jest';
-    this.command = options.command || 'npm test';
+    if (options.autoDetect) {
+      const detectedLanguage = adapterRegistry.detectLanguage();
+      if (!detectedLanguage) {
+        throw new Error('Could not auto-detect project language. Please specify --language explicitly.');
+      }
+      this.language = detectedLanguage;
+      this.adapter = adapterRegistry.get(this.language);
+      
+      const detectedFramework = this.adapter.detectFramework();
+      if (!detectedFramework) {
+        this.framework = this.adapter.defaultFramework;
+      } else {
+        this.framework = detectedFramework;
+      }
+    } else {
+      this.language = options.language || 'javascript';
+      this.adapter = adapterRegistry.get(this.language);
+      this.framework = options.framework || this.adapter.defaultFramework;
+    }
+
+    if (!this.adapter.supportedFrameworks.includes(this.framework)) {
+      throw new Error(
+        `Framework "${this.framework}" is not supported for language "${this.language}". ` +
+        `Supported frameworks: ${this.adapter.supportedFrameworks.join(', ')}`
+      );
+    }
+
+    this.command = options.command || this.adapter.getTestCommand(this.framework);
   }
 
   run(): TestRunResult {
@@ -46,6 +70,7 @@ export class TestRunner {
       failingTests,
       totalFailures: failingTests.length,
       duration,
+      language: this.language,
       framework: this.framework,
       command: this.command,
       stdout,
@@ -55,26 +80,42 @@ export class TestRunner {
   }
 
   private extractFailingTests(output: string): string[] {
-    const pattern = FRAMEWORK_PATTERNS[this.framework];
-    const failingTests: string[] = [];
-    let match: RegExpExecArray | null;
+    const parsedOutput = this.adapter.parseTestOutput(output, this.framework);
+    return parsedOutput.failingTests;
+  }
 
-    const regex = new RegExp(pattern.source, pattern.flags);
-    
-    while ((match = regex.exec(output)) !== null) {
-      if (match[1]) {
-        failingTests.push(match[1]);
+  static getLanguages(): TestLanguage[] {
+    return adapterRegistry.list().map(info => info.language);
+  }
+
+  static getFrameworks(language?: TestLanguage): string[] {
+    if (!language) {
+      const allFrameworks: string[] = [];
+      for (const info of adapterRegistry.list()) {
+        allFrameworks.push(...info.supportedFrameworks);
       }
+      return [...new Set(allFrameworks)];
     }
-
-    return [...new Set(failingTests)];
+    return adapterRegistry.getFrameworksForLanguage(language);
   }
 
-  static getFrameworks(): TestFramework[] {
-    return ['jest', 'mocha', 'vitest'];
+  static isValidLanguage(language: string): language is TestLanguage {
+    return TestRunner.getLanguages().includes(language as TestLanguage);
   }
 
-  static isValidFramework(framework: string): framework is TestFramework {
-    return TestRunner.getFrameworks().includes(framework as TestFramework);
+  static isValidFramework(framework: string, language?: TestLanguage): boolean {
+    if (!language) {
+      return TestRunner.getFrameworks().includes(framework);
+    }
+    return TestRunner.getFrameworks(language).includes(framework);
+  }
+
+  static detectLanguage(projectPath?: string): TestLanguage | null {
+    return adapterRegistry.detectLanguage(projectPath);
+  }
+
+  static detectFramework(language: TestLanguage, projectPath?: string): string | null {
+    const adapter = adapterRegistry.get(language);
+    return adapter.detectFramework(projectPath);
   }
 }
