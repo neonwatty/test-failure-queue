@@ -229,16 +229,4 @@ tfq/
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-MIT
-
-## Author
-
-Created with the help of Claude Code Assistant
-
----
-
-Built with TypeScript, Commander.js, Better-SQLite3, and Chalk.
+Contributions are welcome!  Please feel free to submit a Pull Request.
