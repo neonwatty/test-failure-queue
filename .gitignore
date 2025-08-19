@@ -10,6 +10,7 @@ node_modules/
 # Build output
 dist/
 *.db
+*.tgz
 
 # Test coverage
 coverage/

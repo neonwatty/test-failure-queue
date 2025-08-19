@@ -1,5 +1,8 @@
 # TFQ (Test Failure Queue)
 
+[![npm version](https://badge.fury.io/js/tfq.svg)](https://badge.fury.io/js/tfq)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.
 
 ## Overview

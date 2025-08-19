@@ -1,0 +1,93 @@
+# Source files
+src/
+tests/
+
+# Configuration files
+tsconfig.json
+jest.config.js
+.tfqrc
+
+# Development files
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+coverage/
+.nyc_output/
+__tests__/
+__mocks__/
+
+# Examples and documentation source
+examples/
+docs/
+*.md
+!README.md
+!LICENSE
+
+# Lock files (for libraries, not applications)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Git and CI
+.git/
+.github/
+.gitignore
+.travis.yml
+.circleci/
+.gitlab-ci.yml
+.buildkite/
+.semaphore/
+azure-pipelines.yml
+Jenkinsfile
+
+# IDE
+.vscode/
+.idea/
+.claude/
+.mcp.json
+*.swp
+*.swo
+*.sublime-*
+.project
+.classpath
+.c9/
+.tern-*
+
+# OS files  
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+
+# Local databases and logs
+*.db
+*.log
+example-queue.db
+example.js
+
+# Development dependencies config
+.eslintrc*
+.prettierrc*
+
+# Build artifacts that shouldn't be published
+*.tsbuildinfo
+tmp/
+temp/
+*.pid
+*.seed
+*.pid.lock
+.grunt/
+.parcel-cache/
+.cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/

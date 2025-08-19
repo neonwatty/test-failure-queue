@@ -1,7 +1,7 @@
 {
   "name": "tfq",
-  "version": "2.0.0",
-  "description": "Multi-language test failure queue manager with support for JavaScript, Ruby, Python and more",
+  "version": "1.0.1",
+  "description": "Multi-language test failure queue manager with multi-language support.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -10,31 +10,33 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "test": "jest",
+    "test": "jest --testPathIgnorePatterns='test-example-fail'",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run lint && npm run test && npm run build",
+    "prepare": "npm run build"
   },
   "keywords": [
     "test",
     "queue",
     "sqlite",
     "cli",
-    "testing",
     "failure",
-    "multi-language",
-    "javascript",
-    "ruby",
-    "python",
-    "jest",
-    "mocha",
-    "vitest",
-    "rspec",
-    "minitest",
-    "pytest",
-    "unittest"
+    "multi-language"
   ],
-  "author": "",
+  "author": "Jeremy Watt <jermwatt@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neonwatty/tfq.git"
+  },
+  "bugs": {
+    "url": "https://github.com/neonwatty/tfq/issues"
+  },
+  "homepage": "https://github.com/neonwatty/tfq#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "type": "commonjs",
   "dependencies": {
     "@types/minimatch": "^5.1.2",
