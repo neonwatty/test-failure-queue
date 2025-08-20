@@ -4,7 +4,7 @@ __pycache__/
 .venv/
 
 # local
-docs/
+plans/
 .tfqrc
 .claude/
 .mcp.json
