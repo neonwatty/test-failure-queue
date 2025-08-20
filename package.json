@@ -1,6 +1,6 @@
 {
   "name": "tfq",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Multi-language test failure queue manager with multi-language support.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,7 @@
     "test:all": "jest",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run clean && npm run lint && npm run test && npm run build",
+    "prepublishOnly": "npm run clean && npm run build && npm run lint && npm run test",
     "prepare": "npm run build"
   },
   "keywords": [
