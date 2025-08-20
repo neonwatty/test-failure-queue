@@ -1,6 +1,7 @@
 # Source files
 src/
 tests/
+plans/
 
 # Configuration files
 tsconfig.json
