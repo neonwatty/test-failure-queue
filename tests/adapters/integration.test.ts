@@ -150,7 +150,7 @@ describe('Multi-Language Adapter Integration Tests', () => {
         'javascript:vitest': 'npm test',
         'javascript:jasmine': 'npm test',
         'javascript:ava': 'npm test',
-        'ruby:minitest': 'rails test',
+        'ruby:minitest': ['rails test', 'ruby -Ilib:test'], // Both Rails and non-Rails commands are valid
         'ruby:rspec': 'bundle exec rspec',
         'ruby:test-unit': 'ruby -Ilib:test',
         'ruby:cucumber': 'bundle exec cucumber',
@@ -164,7 +164,17 @@ describe('Multi-Language Adapter Integration Tests', () => {
         const [language, framework] = key.split(':');
         const adapter = adapterRegistry.get(language as TestLanguage);
         const command = adapter.getTestCommand(framework);
-        expect(command).toContain(expectedCommand.split(' ')[0]);
+        
+        // Handle both string and array expectations
+        if (Array.isArray(expectedCommand)) {
+          // For commands that can vary (like minitest), check if it matches any valid option
+          const matchesAny = expectedCommand.some(expected => 
+            command.includes(expected.split(' ')[0])
+          );
+          expect(matchesAny).toBe(true);
+        } else {
+          expect(command).toContain(expectedCommand.split(' ')[0]);
+        }
       });
     });
   });

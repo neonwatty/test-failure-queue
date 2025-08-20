@@ -1,0 +1,8 @@
+{
+  "language": "python",
+  "framework": "pytest",
+  "testCommand": "pytest -v",
+  "testPattern": "test_*.py",
+  "priority": 10,
+  "maxRetries": 3
+}

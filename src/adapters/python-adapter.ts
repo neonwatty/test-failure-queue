@@ -220,13 +220,12 @@ export class PythonAdapter extends BaseAdapter {
     
     const passed = rawFailures.length === 0 && rawErrors.length === 0;
     
-    // For pytest, separate file path from test identifier
+    // For pytest, extract just the file path from the file::test format for failures/errors
     let failures: ParsedTestOutput['failures'];
     let errors: ParsedTestOutput['errors'];
-    let failingTests: string[];
     
     if (framework === 'pytest') {
-      // For failures array, extract just the file path
+      // For pytest, extract just the file path from the file::test format
       failures = rawFailures.map(f => ({
         ...f,
         file: f.file.includes('::') ? f.file.split('::')[0] : f.file
@@ -235,20 +234,74 @@ export class PythonAdapter extends BaseAdapter {
         ...e,
         file: e.file.includes('::') ? e.file.split('::')[0] : e.file
       }));
-      
-      // For failingTests, keep the full pytest format
-      failingTests = [...new Set([
-        ...rawFailures.map(f => f.file),
-        ...rawErrors.map(e => e.file)
-      ])];
     } else {
       failures = rawFailures;
       errors = rawErrors;
-      failingTests = [...new Set([
-        ...failures.map(f => f.line ? `${f.file}:${f.line}` : f.file),
-        ...errors.map(e => e.line ? `${e.file}:${e.line}` : e.file)
-      ])];
     }
+    
+    // Check if a file is a test file
+    const isTestFile = (filePath: string): boolean => {
+      const normalized = filePath.toLowerCase();
+      // Python test files typically:
+      // - Are in test/, tests/, or test_* directories
+      // - Start with test_ or end with _test.py
+      // - Or are in features/ directory for BDD tests
+      return (
+        normalized.includes('/test/') ||
+        normalized.includes('/tests/') ||
+        normalized.includes('/test_') ||
+        normalized.includes('/features/') ||
+        normalized.includes('test_') ||
+        normalized.endsWith('_test.py') ||
+        normalized.endsWith('_tests.py')
+      );
+    };
+    
+    // Collect unique file paths - keep test identifiers for pytest
+    const failingFiles = new Set<string>();
+    
+    // Add failures - only if they're test files
+    // For pytest, keep the full test identifier (file::test) from rawFailures
+    // For other frameworks, include line numbers if available
+    if (framework === 'pytest') {
+      // Use rawFailures for pytest to keep the full format
+      rawFailures.forEach(f => {
+        if (isTestFile(f.file.split('::')[0])) {
+          failingFiles.add(f.file);
+        }
+      });
+      rawErrors.forEach(e => {
+        if (isTestFile(e.file.split('::')[0])) {
+          failingFiles.add(e.file);
+        }
+      });
+    } else {
+      // For other frameworks, use the processed failures/errors
+      failures.forEach(f => {
+        const filePath = f.file.split(':')[0]; // Get base file path
+        if (isTestFile(filePath)) {
+          // Include line number if available
+          if (f.line) {
+            failingFiles.add(`${filePath}:${f.line}`);
+          } else {
+            failingFiles.add(filePath);
+          }
+        }
+      });
+      errors.forEach(e => {
+        const filePath = e.file.split(':')[0]; // Get base file path
+        if (isTestFile(filePath)) {
+          // Include line number if available
+          if (e.line) {
+            failingFiles.add(`${filePath}:${e.line}`);
+          } else {
+            failingFiles.add(filePath);
+          }
+        }
+      });
+    }
+    
+    const failingTests = Array.from(failingFiles);
     
     return {
       passed,

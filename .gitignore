@@ -1,3 +1,6 @@
+# python
+*.pyc
+
 # local
 .claude/
 .mcp.json

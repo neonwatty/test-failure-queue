@@ -89,10 +89,20 @@ describe('RubyAdapter', () => {
   
   describe('getTestCommand', () => {
     it('should return rails test for minitest', () => {
+      // Mock Rails detection
+      mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
+        const pathStr = path.toString();
+        return pathStr.endsWith('config/application.rb') || pathStr.endsWith('bin/rails');
+      });
       expect(adapter.getTestCommand('minitest')).toBe('rails test');
     });
     
     it('should return rails test with path for minitest', () => {
+      // Mock Rails detection
+      mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
+        const pathStr = path.toString();
+        return pathStr.endsWith('config/application.rb') || pathStr.endsWith('bin/rails');
+      });
       expect(adapter.getTestCommand('minitest', 'test/models/user_test.rb')).toBe('rails test test/models/user_test.rb');
     });
     

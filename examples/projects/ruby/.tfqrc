@@ -1,0 +1,10 @@
+{
+  "language": "ruby",
+  "framework": "minitest",
+  "testCommand": "ruby -Ilib:test test/**/*_test.rb",
+  "testPattern": "test/**/*_test.rb",
+  "failurePattern": "\\d+\\) (Error|Failure):",
+  "priority": 1,
+  "maxRetries": 3,
+  "timeout": 30000
+}

@@ -1,0 +1,30 @@
+{
+  "name": "typescript-calculator-example",
+  "version": "1.0.0",
+  "description": "TypeScript Calculator with Vitest testing - Example for TFQ",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc",
+    "dev": "tsx src/calculator.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  },
+  "keywords": [
+    "typescript",
+    "vitest",
+    "testing",
+    "calculator",
+    "tfq",
+    "example"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -200,10 +200,44 @@ export class JavaScriptAdapter extends BaseAdapter {
     const summary = this.extractSummary(output);
     
     const passed = failures.length === 0 && errors.length === 0;
-    const failingTests = [...new Set([
-      ...failures.map(f => f.line ? `${f.file}:${f.line}` : f.file),
-      ...errors.map(e => e.line ? `${e.file}:${e.line}` : e.file)
-    ])];
+    
+    // Check if a file is a test file
+    const isTestFile = (filePath: string): boolean => {
+      const normalized = filePath.toLowerCase();
+      // JavaScript/TypeScript test files typically:
+      // - Are in test/, tests/, spec/, specs/, or __tests__/ directories
+      // - End with .test.js, .spec.js, .test.ts, .spec.ts, etc.
+      // - Or end with .e2e.js, .e2e.ts for end-to-end tests
+      return (
+        normalized.includes('/test/') ||
+        normalized.includes('/tests/') ||
+        normalized.includes('/spec/') ||
+        normalized.includes('/specs/') ||
+        normalized.includes('/__tests__/') ||
+        normalized.includes('.test.') ||
+        normalized.includes('.spec.') ||
+        normalized.includes('.e2e.')
+      );
+    };
+    
+    // Collect unique file paths (without line numbers)
+    const failingFiles = new Set<string>();
+    
+    // Add failures - only if they're test files
+    failures.forEach(f => {
+      if (isTestFile(f.file)) {
+        failingFiles.add(f.file);
+      }
+    });
+    
+    // Add errors - only if they're test files
+    errors.forEach(e => {
+      if (isTestFile(e.file)) {
+        failingFiles.add(e.file);
+      }
+    });
+    
+    const failingTests = Array.from(failingFiles);
     
     return {
       passed,

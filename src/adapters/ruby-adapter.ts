@@ -54,10 +54,22 @@ export class RubyAdapter extends BaseAdapter {
     
     switch (framework.toLowerCase()) {
       case 'minitest':
-        if (testPath) {
-          return `rails test ${basePath}`;
+        // Check if this is a Rails project
+        const isRails = fs.existsSync(path.join(process.cwd(), 'config/application.rb')) ||
+                       fs.existsSync(path.join(process.cwd(), 'bin/rails'));
+        
+        if (isRails) {
+          if (testPath) {
+            return `rails test ${basePath}`;
+          }
+          return 'rails test';
+        } else {
+          // For non-Rails Minitest projects, use ruby directly
+          if (testPath) {
+            return `ruby -Ilib:test ${basePath}`;
+          }
+          return `ruby -Ilib:test -e "Dir.glob('test/**/*_test.rb').each { |file| require File.expand_path(file) }"`;
         }
-        return 'rails test';
         
       case 'rspec':
         if (testPath) {
@@ -87,23 +99,8 @@ export class RubyAdapter extends BaseAdapter {
       case 'minitest':
         return [
           {
-            pattern: /Failure:\n(.+?)#(.+?)\s+\[(.+?):(\d+)\]/gm,
-            type: 'failure',
-            extractLocation: (match) => ({
-              file: match[3],
-              line: parseInt(match[4], 10)
-            })
-          },
-          {
-            pattern: /Error:\n(.+?)#(.+?):\n(.+?)\n\s+(.+?):(\d+)/gm,
-            type: 'error',
-            extractLocation: (match) => ({
-              file: match[4],
-              line: parseInt(match[5], 10)
-            })
-          },
-          {
-            pattern: /rails test (.+?):(\d+)/g,
+            // Minitest failure format with square brackets: [file.rb:line]:
+            pattern: /\[(.+?\.rb):(\d+)\]/g,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[1],
@@ -111,8 +108,45 @@ export class RubyAdapter extends BaseAdapter {
             })
           },
           {
-            // Match simple "Failure: path/to/file.rb:123" format
-            pattern: /^Failure:\s+([^:\[\s]+\.rb):(\d+)$/gm,
+            // Simple failure format for single line: "Failure: path/file.rb:line"
+            // Must be at start of string or after newline, and followed by end or newline
+            pattern: /(?:^|[\n\r])Failure:\s+([^\[\s]+\.rb):(\d+)(?:$|[\n\r])/gm,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: match[1],
+              line: parseInt(match[2], 10)
+            })
+          },
+          {
+            // Standard Minitest failure format with file path in error message
+            pattern: /^\s+(.+?\.rb):(\d+):in\s+[`'](.+?)['']$/gm,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: match[1],
+              line: parseInt(match[2], 10)
+            })
+          },
+          {
+            // Alternative format: /path/to/file.rb:line:in 'method'
+            pattern: /^\s+\/(.+?\.rb):(\d+):in\s+[`'](.+?)['']$/gm,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: '/' + match[1],
+              line: parseInt(match[2], 10)
+            })
+          },
+          {
+            // Rails 8 format: bin/rails test file:line (preferred over the Class#test format)
+            pattern: /bin\/rails test (.+?):(\d+)/g,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: match[1],
+              line: parseInt(match[2], 10)
+            })
+          },
+          {
+            // Rails 7 and earlier format: rails test file:line
+            pattern: /rails test (.+?):(\d+)/gm,
             type: 'failure',
             extractLocation: (match) => ({
               file: match[1],
@@ -221,10 +255,53 @@ export class RubyAdapter extends BaseAdapter {
     const summary = this.extractRubySummary(output, framework);
     
     const passed = failures.length === 0 && errors.length === 0;
-    const failingTests = [...new Set([
-      ...failures.map(f => f.line ? `${f.file}:${f.line}` : f.file),
-      ...errors.map(e => e.line ? `${e.file}:${e.line}` : e.file)
-    ])];
+    
+    // Check if a file is a test file
+    const isTestFile = (filePath: string): boolean => {
+      const normalized = filePath.toLowerCase();
+      // Ruby test files typically:
+      // - Are in test/ or spec/ directories
+      // - End with _test.rb or _spec.rb
+      // - Or are in features/ directory for Cucumber
+      return (
+        normalized.includes('/test/') ||
+        normalized.includes('/spec/') ||
+        normalized.includes('/features/') ||
+        normalized.endsWith('_test.rb') ||
+        normalized.endsWith('_spec.rb') ||
+        normalized.endsWith('.feature')
+      );
+    };
+    
+    // Collect all failing file paths WITH line numbers and deduplicate
+    const failingFiles = new Set<string>();
+    
+    // Add failures - only if they're test files, include line numbers
+    failures.forEach(f => {
+      if (isTestFile(f.file)) {
+        // Include line number if available
+        if (f.line) {
+          failingFiles.add(`${f.file}:${f.line}`);
+        } else {
+          failingFiles.add(f.file);
+        }
+      }
+    });
+    
+    // Add errors - only if they're test files, include line numbers
+    errors.forEach(e => {
+      if (isTestFile(e.file)) {
+        // Include line number if available
+        if (e.line) {
+          failingFiles.add(`${e.file}:${e.line}`);
+        } else {
+          failingFiles.add(e.file);
+        }
+      }
+    });
+    
+    // Convert Set to array
+    const failingTests = Array.from(failingFiles);
     
     return {
       passed,
@@ -245,12 +322,22 @@ export class RubyAdapter extends BaseAdapter {
     
     switch (framework.toLowerCase()) {
       case 'minitest':
+        // Try standard Minitest format first
         const minitestMatch = output.match(/(\d+)\s+runs?,\s+(\d+)\s+assertions?,\s+(\d+)\s+failures?,\s+(\d+)\s+errors?,\s+(\d+)\s+skips?/);
         if (minitestMatch) {
           summary.total = parseInt(minitestMatch[1], 10);
           summary.failed = parseInt(minitestMatch[3], 10) + parseInt(minitestMatch[4], 10);
           summary.skipped = parseInt(minitestMatch[5], 10);
           summary.passed = summary.total - summary.failed - summary.skipped;
+        } else {
+          // Try alternate format: "56 tests, 60 assertions, 4 failures, 1 errors, 0 skips"
+          const altMatch = output.match(/(\d+)\s+tests?,\s+(\d+)\s+assertions?,\s+(\d+)\s+failures?,\s+(\d+)\s+errors?,\s+(\d+)\s+skips?/);
+          if (altMatch) {
+            summary.total = parseInt(altMatch[1], 10);
+            summary.failed = parseInt(altMatch[3], 10) + parseInt(altMatch[4], 10);
+            summary.skipped = parseInt(altMatch[5], 10);
+            summary.passed = summary.total - summary.failed - summary.skipped;
+          }
         }
         break;
         
