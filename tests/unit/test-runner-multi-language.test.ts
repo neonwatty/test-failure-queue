@@ -1,18 +1,19 @@
-import { TestRunner } from '../../src/test-runner';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { TestRunner } from '../../src/core/test-runner.js';
 import { execSync } from 'child_process';
-import { adapterRegistry } from '../../src/adapters/registry';
-import * as fs from 'fs';
-import * as path from 'path';
+import { adapterRegistry } from '../../src/adapters/registry.js';
+import fs from 'fs';
+import path from 'path';
 
-jest.mock('child_process');
-jest.mock('fs');
+vi.mock('child_process');
+vi.mock('fs');
 
 describe('TestRunner - Multi-Language Integration', () => {
-  const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
-  const mockFs = fs as jest.Mocked<typeof fs>;
+  const mockExecSync = execSync as any;
+  const mockFs = fs as any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Ruby Language Support', () => {
@@ -245,9 +246,9 @@ pytest-django==4.5.0
     });
 
     it('should handle auto-detection with TestRunner constructor', () => {
-      jest.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue('ruby');
+      vi.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue('ruby');
       const adapter = adapterRegistry.get('ruby');
-      jest.spyOn(adapter, 'detectFramework').mockReturnValue('minitest');
+      vi.spyOn(adapter, 'detectFramework').mockReturnValue('minitest');
 
       mockExecSync.mockReturnValue('All tests passed\n');
 
@@ -261,14 +262,14 @@ pytest-django==4.5.0
   });
 
   describe('Backward Compatibility', () => {
-    it('should default to JavaScript/Jest when no options provided', () => {
+    it('should default to JavaScript/Vitest when no options provided', () => {
       mockExecSync.mockReturnValue('All tests passed\n');
 
       const runner = new TestRunner();
       const result = runner.run();
 
       expect(result.language).toBe('javascript');
-      expect(result.framework).toBe('jest');
+      expect(result.framework).toBe('vitest');
       expect(result.command).toBe('npm test');
     });
 
@@ -379,7 +380,7 @@ pytest-django==4.5.0
 
   describe('Error Handling', () => {
     it('should handle missing language adapter gracefully', () => {
-      const getSpy = jest.spyOn(adapterRegistry, 'get').mockImplementation(() => {
+      const getSpy = vi.spyOn(adapterRegistry, 'get').mockImplementation(() => {
         throw new Error('Adapter not found');
       });
 

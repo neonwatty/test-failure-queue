@@ -1,12 +1,12 @@
 # TFQ (Test Failure Queue) - User Guide
 
-A TypeScript library for managing failed test files in a persistent SQLite queue. Perfect for both human developers and AI agents like Claude Code to track and process test failures systematically.
+A TypeScript library for managing failed test files in a persistent SQLite queue. Perfect for both human developers and Claude Code SDK to track and process test failures systematically.
 
 ## Table of Contents
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [CLI Usage for Humans](#cli-usage-for-humans)
-- [CLI Usage for AI Agents](#cli-usage-for-ai-agents)
+- [CLI Usage for Claude Code SDK](#cli-usage-for-claude-code-sdk)
 - [Programmatic API](#programmatic-api)
 - [Examples](#examples)
 - [Troubleshooting](#troubleshooting)
@@ -59,9 +59,9 @@ tfq stats
 ### JavaScript/TypeScript
 
 #### Supported Frameworks
-- **Jest** (default): Facebook's testing framework
+- **Vitest** (default): Vite-native test runner
+- **Jest**: Facebook's testing framework
 - **Mocha**: Flexible testing framework
-- **Vitest**: Vite-native test runner
 - **Jasmine**: Behavior-driven testing framework
 - **AVA**: Minimal and fast test runner
 
@@ -277,8 +277,8 @@ Run tests with automatic failure detection:
 # Auto-detect language and framework
 tfq run-tests --auto-detect
 
-# Run default test command (npm test) with Jest
-tfq run-tests --language javascript --framework jest
+# Run default test command (npm test) with Vitest
+tfq run-tests --language javascript --framework vitest
 
 # Run custom test command
 tfq run-tests "npm run test:integration" --language javascript
@@ -404,7 +404,95 @@ tfq stats
 #   Priority 0: 2 item(s)
 ```
 
-## CLI Usage for AI Agents
+### Test Fixing using Claude Code SDK
+
+The `tfq fix-tests` command uses Claude Code SDK to automatically fix failing tests in your queue. **Important: This command processes tests one at a time from the queue**, analyzing each test in isolation, fixing it, and then moving to the next test until the queue is empty or all iterations are exhausted.
+
+#### How It Works
+
+1. **Retrieves next test from queue**: Gets the highest priority test from the queue
+2. **Analyzes the test**: Claude Code SDK examines the test file and related source code
+3. **Applies fixes**: Makes necessary changes to fix the test
+4. **Verifies the fix**: Runs the test to check if it passes
+5. **Updates queue**: Removes successful tests from queue, re-queues failed ones
+6. **Repeats**: Continues with the next test until queue is empty
+
+#### Basic Usage
+
+```bash
+# Fix all tests in queue one by one
+tfq fix-tests
+
+# Run tests first to populate queue, then fix them
+tfq fix-tests --auto-run
+
+# Dry run mode - preview what would be fixed without making changes
+tfq fix-tests --dry-run
+```
+
+#### Configuration Options
+
+```bash
+# Configure retry behavior (per test)
+tfq fix-tests --max-retries 5 --max-iterations 15
+
+# Specify language and framework
+tfq fix-tests --language javascript --framework jest
+tfq fix-tests --language python --framework pytest
+
+# Custom system prompt for Claude
+tfq fix-tests --system-prompt "Focus on fixing syntax errors first"
+
+# Verbose output to see detailed progress
+tfq fix-tests --verbose
+
+# JSON output for programmatic usage
+tfq fix-tests --json
+```
+
+#### Cost Management
+
+Since Claude Code SDK uses the Anthropic API, it's important to manage costs:
+
+```bash
+# Always start with dry run to estimate costs
+tfq fix-tests --dry-run --json | jq '.estimatedCost'
+
+# Monitor token usage during fixing
+tfq fix-tests --verbose  # Shows token usage per test
+
+# Use custom prompts to reduce token usage
+tfq fix-tests --system-prompt "Provide minimal fixes only"
+```
+
+#### Example Workflow
+
+```bash
+# Step 1: Run tests and populate queue with failures
+tfq run-tests --auto-detect --auto-add --priority 5
+
+# Step 2: Check what's in the queue
+tfq list
+# Output: Queue contains 3 file(s)
+
+# Step 3: Preview what would be fixed (dry run)
+tfq fix-tests --dry-run
+
+# Step 4: Fix tests one by one
+tfq fix-tests --verbose
+# Output:
+# Processing test 1/3: /path/to/test1.spec.ts
+# ✓ Fixed successfully
+# Processing test 2/3: /path/to/test2.spec.ts
+# ✓ Fixed successfully
+# Processing test 3/3: /path/to/test3.spec.ts
+# ⚠ Failed after 3 retries, re-queued with higher priority
+
+# Step 5: Check remaining tests
+tfq stats
+```
+
+## CLI Usage for Claude Code SDK
 
 All commands support `--json` flag for machine-readable output.
 
@@ -423,7 +511,7 @@ Output:
     {
       "language": "javascript",
       "supportedFrameworks": ["jest", "mocha", "vitest", "jasmine", "ava"],
-      "defaultFramework": "jest"
+      "defaultFramework": "vitest"
     },
     {
       "language": "ruby",
@@ -543,7 +631,7 @@ Output:
 }
 ```
 
-### AI Agent Integration Example
+### Claude Code SDK Integration Example
 
 ```bash
 # Run tests and automatically populate queue
@@ -609,6 +697,69 @@ console.log(`Average failures per test: ${stats.averageFailureCount}`);
 queue.close();
 ```
 
+### Using Core Components Directly
+
+```typescript
+// Import core components from their specific modules
+import { TestFailureQueue } from 'tfq/core/queue';
+import { TestDatabase } from 'tfq/core/database';
+import { TestRunner } from 'tfq/core/test-runner';
+import { ConfigManager } from 'tfq/core/config';
+import type { QueueItem, TestRunResult } from 'tfq/core/types';
+
+// Use core components
+const db = new TestDatabase('./custom-queue.db');
+const runner = new TestRunner();
+const config = new ConfigManager('./config.json');
+
+// Run tests and get results
+const result: TestRunResult = await runner.run('npm test', {
+  language: 'javascript',
+  framework: 'jest'
+});
+
+// Process failed tests
+if (!result.success && result.failingTests) {
+  const queue = new TestFailureQueue({ database: db });
+  result.failingTests.forEach(test => {
+    queue.enqueue(test, 5);
+  });
+}
+```
+
+### Using Claude Code SDK Integration
+
+```typescript
+// Import Claude integration components
+import { TestFixer } from 'tfq/integrations/claude/test-fixer';
+import { ClaudeCodeClient } from 'tfq/integrations/claude/claude-code-client';
+import type { FixOptions, FixResult } from 'tfq/integrations/claude/types';
+
+// Initialize test fixer with options
+const fixer = new TestFixer({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  maxRetries: 3,
+  maxIterations: 10,
+  verbose: true
+});
+
+// Fix all tests in queue
+const results: FixResult[] = await fixer.fixAllTests();
+
+// Or fix specific test
+const result = await fixer.fixTest('/path/to/failing.test.ts', {
+  systemPrompt: 'Focus on fixing syntax errors',
+  dryRun: false
+});
+
+// Use Claude client directly
+const client = new ClaudeCodeClient(process.env.ANTHROPIC_API_KEY);
+const response = await client.sendMessage({
+  system: 'You are a helpful assistant',
+  messages: [{ role: 'user', content: 'Fix this test...' }]
+});
+```
+
 ### JavaScript Usage
 
 ```javascript
@@ -633,10 +784,11 @@ if (next) {
 ### Example 1: Test Runner Integration
 
 ```typescript
-import { TestFailureQueue } from 'tfq';
-import { runTests } from './test-runner';
+import { TestFailureQueue } from 'tfq/core/queue';
+import { TestRunner } from 'tfq/core/test-runner';
 
 const queue = new TestFailureQueue();
+const runner = new TestRunner();
 
 async function processFailedTests() {
   let testPath;
@@ -644,7 +796,10 @@ async function processFailedTests() {
   while ((testPath = queue.dequeue()) !== null) {
     console.log(`Attempting to fix: ${testPath}`);
     
-    const result = await runTests(testPath);
+    const result = await runner.run(`npm test ${testPath}`, {
+      language: 'javascript',
+      framework: 'jest'
+    });
     
     if (!result.success) {
       // Test still failing, add back with increased priority
@@ -689,9 +844,9 @@ while true; do
 done
 ```
 
-### Example 3: Claude Code Integration
+### Example 3: Claude Code SDK Integration
 
-When using with Claude Code or other AI agents:
+When using with Claude Code SDK:
 
 ```bash
 # Auto-detect language and framework for any project
@@ -707,14 +862,14 @@ tfq run-tests "npm test" --language javascript --auto-add
 tfq run-tests "pytest" --language python --auto-add
 tfq run-tests "rails test" --language ruby --auto-add
 
-# Get summary for AI
+# Get summary for Claude Code SDK
 tfq list --json > failed-tests.json
 
-# AI processes tests one by one
+# Claude Code SDK processes tests one by one
 while [ $(tfq list --json | jq '.count') -gt 0 ]; do
   TEST=$(tfq next --json | jq -r '.filePath')
   echo "Claude, please fix the test at: $TEST"
-  # AI fixes the test...
+  # Claude Code SDK fixes the test...
 done
 ```
 
@@ -819,7 +974,8 @@ cp $(npm root -g)/tfq/examples/configs/python.tfqrc ~/.tfqrc
 ### Programmatic Configuration
 
 ```typescript
-import { TestFailureQueue, ConfigManager, loadConfig } from 'tfq';
+import { TestFailureQueue } from 'tfq/core/queue';
+import { ConfigManager, loadConfig } from 'tfq/core/config';
 
 // Load config from default locations
 const config = loadConfig();
@@ -849,7 +1005,7 @@ For language and framework selection, the precedence is:
 1. CLI flags (`--language`, `--framework`)
 2. Configuration file (`defaultLanguage`, `defaultFrameworks`)
 3. Auto-detection (`--auto-detect`)
-4. Built-in defaults (JavaScript/Jest)
+4. Built-in defaults (JavaScript/Vitest)
 
 For test commands, the precedence is:
 1. CLI command argument
@@ -1128,7 +1284,52 @@ ON failed_tests(priority DESC, created_at ASC);
 
 4. **Track patterns:** Use stats to identify frequently failing tests
 
-5. **For AI agents:** Always use `--json` flag and parse the structured output
+5. **For Claude Code SDK:** Always use `--json` flag and parse the structured output
+
+## Testing and Development
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test suites
+npm test tests/integration/examples-integration.test.ts
+npm test tests/integration/fix-tests.test.ts
+
+# Run with coverage
+npm run test:coverage
+```
+
+### API Key Configuration
+
+The Claude Code SDK integration uses the same Anthropic API key that you would use for any Claude API access:
+
+1. **Get your API key** from the [Anthropic Console](https://console.anthropic.com/)
+2. **Set the environment variable**:
+   ```bash
+   export ANTHROPIC_API_KEY="your-api-key-here"
+   ```
+
+This single API key works for:
+- Direct Claude API calls
+- Claude Code SDK integration in TFQ (`tfq fix-tests`)
+- Any other tools using the Anthropic API
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test suites
+npm test tests/integration/examples-integration.test.ts
+npm test tests/integration/fix-tests.test.ts
+
+# Run with coverage
+npm run test:coverage
+```
 
 ## Support
 

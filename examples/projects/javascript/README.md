@@ -142,7 +142,7 @@ The following tests are designed to fail for demonstration:
 
 The `.tfqrc` file configures TFQ behavior:
 - Default language: JavaScript
-- Default framework: Jest
+- Default framework: Vitest
 - Test patterns for failure detection
 - Retry settings for flaky tests
 - Priority levels for organizing failures

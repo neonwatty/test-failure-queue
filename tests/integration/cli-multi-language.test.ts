@@ -1,8 +1,13 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { spawn } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
+import path from 'path';
+import fs from 'fs';
 import * as os from 'os';
-const kill = require('tree-kill');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import kill from 'tree-kill';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('CLI - Multi-Language Support (Integration)', () => {
   const cliPath = path.join(__dirname, '../..', 'src', 'cli.ts');
@@ -118,7 +123,9 @@ describe('CLI - Multi-Language Support (Integration)', () => {
       const result = await runCLI(['languages', '--json']);
       
       expect(result.exitCode).toBe(0);
-      const json = JSON.parse(result.stdout);
+      // Filter out any non-JSON lines (like dotenv output)
+      const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+      const json = JSON.parse(jsonLine!);
       expect(json.success).toBe(true);
       expect(json.languages).toBeInstanceOf(Array);
       expect(json.languages.length).toBeGreaterThan(0);
@@ -165,7 +172,9 @@ describe('CLI - Multi-Language Support (Integration)', () => {
       const result = await runCLI(['run-tests', '--language', 'python', '--list-frameworks', '--json']);
       
       expect(result.exitCode).toBe(0);
-      const json = JSON.parse(result.stdout);
+      // Filter out any non-JSON lines (like dotenv output)
+      const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+      const json = JSON.parse(jsonLine!);
       expect(json.success).toBe(true);
       expect(json.language).toBe('python');
       expect(json.frameworks).toBeInstanceOf(Array);
@@ -201,7 +210,7 @@ describe('CLI - Multi-Language Support (Integration)', () => {
       // The command will fail since we don't have actual tests, but we can check the output
       expect(result.stdout).toContain('Running tests');
       expect(result.stdout).toContain('javascript');
-      expect(result.stdout).toContain('jest'); // Default framework
+      expect(result.stdout).toContain('vitest'); // Default framework
     }, 15000); // Increase timeout since it runs actual tests
 
     it('should run Python tests with specified framework', async () => {

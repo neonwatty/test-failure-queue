@@ -2,13 +2,20 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { TestFailureQueue } from './queue';
-import { QueueItem, ConfigFile, TestFramework, TestLanguage } from './types';
-import { ConfigManager, loadConfig } from './config';
-import { TestRunner } from './test-runner';
-import { adapterRegistry } from './adapters/registry';
-import * as fs from 'fs';
-import * as path from 'path';
+import { TestFailureQueue } from './core/queue.js';
+import { QueueItem, ConfigFile, TestFramework, TestLanguage } from './core/types.js';
+import { ConfigManager, loadConfig } from './core/config.js';
+import { TestRunner } from './core/test-runner.js';
+import { adapterRegistry } from './adapters/registry.js';
+import { TestFixer, TestFixerConfig } from './integrations/claude/test-fixer.js';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import dotenv from 'dotenv';
+import dotenvExpand from 'dotenv-expand';
+
+const myEnv = dotenv.config({ silent: true } as any);
+dotenvExpand.expand(myEnv);
 
 const program = new Command();
 let config: ConfigFile = {};
@@ -634,6 +641,185 @@ program
   });
 
 program
+  .command('fix-tests')
+  .description('Automatically fix failing tests using AI')
+  .option('--auto-run', 'Run tests first to populate queue')
+  .option('--max-iterations <n>', 'Max queue processing iterations', '10')
+  .option('--max-retries <n>', 'Max fix attempts per test', '3')
+  .option('-l, --language <type>', 'Programming language')
+  .option('-f, --framework <type>', 'Test framework')
+  .option('--system-prompt <text>', 'Custom system prompt for Claude')
+  .option('--dry-run', 'Show what would be fixed without changes')
+  .option('--verbose', 'Detailed logging')
+  .option('--json', 'Output in JSON format')
+  .action(async (options) => {
+    try {
+      let language = options.language || null;
+      let framework = options.framework || null;
+
+      if (options.autoRun) {
+        if (!useJsonOutput(options)) {
+          console.log(chalk.blue('Running tests to populate queue...'));
+        }
+
+        if (!language) {
+          language = adapterRegistry.detectLanguage() || 'javascript';
+        }
+        
+        if (!framework) {
+          framework = adapterRegistry.detectFramework(language);
+        }
+
+        const runner = new TestRunner({
+          language: language as TestLanguage,
+          framework: framework as TestFramework,
+        });
+
+        const result = runner.run();
+        
+        if (result.failingTests.length > 0) {
+          if (!useJsonOutput(options)) {
+            console.log(chalk.yellow(`Found ${result.failingTests.length} failing test(s)`));
+            console.log(chalk.blue('Adding to queue...'));
+          }
+          
+          result.failingTests.forEach(test => {
+            queue.enqueue(test, 0, result.failureDetails?.[test]?.error);
+          });
+        } else if (!result.success) {
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ 
+              success: false, 
+              error: 'Tests failed but no specific test files were identified' 
+            }));
+          } else {
+            console.error(chalk.red('Tests failed but no specific test files were identified'));
+          }
+          process.exit(1);
+        }
+      }
+
+      const queueSize = queue.size();
+      if (queueSize === 0) {
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ 
+            success: true, 
+            message: 'No failed tests in queue to fix' 
+          }));
+        } else {
+          console.log(chalk.yellow('No failed tests in queue to fix'));
+          console.log(chalk.gray('Run with --auto-run to run tests first'));
+        }
+        return;
+      }
+
+      if (!language) {
+        language = adapterRegistry.detectLanguage() || 'javascript';
+      }
+      
+      if (!framework) {
+        framework = adapterRegistry.detectFramework(language);
+      }
+
+      const runner = new TestRunner({
+        language: language as TestLanguage,
+        framework: framework as TestFramework,
+      });
+
+      const fixerConfig: TestFixerConfig = {
+        maxRetries: parseInt(options.maxRetries, 10),
+        maxIterations: parseInt(options.maxIterations, 10),
+        systemPrompt: options.systemPrompt || config.fixTestsSystemPrompt,
+        verbose: options.verbose,
+        dryRun: options.dryRun,
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      };
+
+      if (!fixerConfig.apiKey) {
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ 
+            success: false, 
+            error: 'ANTHROPIC_API_KEY environment variable is required' 
+          }));
+        } else {
+          console.error(chalk.red('Error:'), 'ANTHROPIC_API_KEY environment variable is required');
+          console.error(chalk.gray('Set it in your .env file or environment'));
+        }
+        process.exit(1);
+      }
+
+      if (!useJsonOutput(options)) {
+        console.log(chalk.bold('\n🤖 Starting AI-powered test fixing...\n'));
+        console.log(chalk.gray(`Language: ${language}`));
+        console.log(chalk.gray(`Framework: ${framework}`));
+        console.log(chalk.gray(`Queue size: ${queueSize} test(s)`));
+        console.log(chalk.gray(`Max iterations: ${fixerConfig.maxIterations}`));
+        console.log(chalk.gray(`Max retries per test: ${fixerConfig.maxRetries}`));
+        if (options.dryRun) {
+          console.log(chalk.yellow('DRY RUN MODE - No changes will be made'));
+        }
+        console.log();
+      }
+
+      const fixer = new TestFixer(queue, runner, fixerConfig);
+      const result = await fixer.fixFailedTests();
+
+      if (useJsonOutput(options)) {
+        const claude = (fixer as any).claude;
+        const tokenUsage = claude ? claude.getTokenUsage() : { input: 0, output: 0, total: 0 };
+        const cost = claude ? claude.estimateCost() : { input: 0, output: 0, total: 0 };
+
+        console.log(JSON.stringify({
+          success: result.fixedTests > 0,
+          totalTests: result.totalTests,
+          fixedTests: result.fixedTests,
+          failedTests: result.failedTests,
+          skippedTests: result.skippedTests,
+          totalTime: result.totalTime,
+          attempts: result.attempts,
+          tokenUsage,
+          estimatedCost: cost,
+        }));
+      } else {
+        console.log(chalk.bold('\n📊 Fix Session Complete\n'));
+        console.log(fixer.getSummary());
+
+        const claude = (fixer as any).claude;
+        if (claude) {
+          const tokenUsage = claude.getTokenUsage();
+          const cost = claude.estimateCost();
+          
+          console.log(chalk.bold('\n💰 API Usage:\n'));
+          console.log(`Input tokens: ${tokenUsage.input.toLocaleString()}`);
+          console.log(`Output tokens: ${tokenUsage.output.toLocaleString()}`);
+          console.log(`Total tokens: ${tokenUsage.total.toLocaleString()}`);
+          console.log(`Estimated cost: $${cost.total.toFixed(4)}`);
+        }
+
+        if (result.fixedTests === 0 && result.totalTests > 0) {
+          console.log(chalk.yellow('\n⚠️  No tests were successfully fixed'));
+          console.log(chalk.gray('Consider:'));
+          console.log(chalk.gray('  - Reviewing the test failures manually'));
+          console.log(chalk.gray('  - Adjusting the system prompt'));
+          console.log(chalk.gray('  - Increasing max retries'));
+        }
+      }
+
+      process.exit(result.fixedTests === result.totalTests ? 0 : 1);
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+        if (error.stack && options.verbose) {
+          console.error(chalk.gray(error.stack));
+        }
+      }
+      process.exit(1);
+    }
+  });
+
+program
   .command('config')
   .description('Manage configuration')
   .option('--init', 'Create default config file')
@@ -662,8 +848,8 @@ program
           console.log('No config file found. Using defaults.');
           console.log('\nConfig file search paths (in order):');
           console.log('  1.', chalk.cyan(path.join(process.cwd(), '.tfqrc')));
-          console.log('  2.', chalk.cyan(path.join(require('os').homedir(), '.tfqrc')));
-          console.log('  3.', chalk.cyan(path.join(require('os').homedir(), '.tfq', 'config.json')));
+          console.log('  2.', chalk.cyan(path.join(os.homedir(), '.tfqrc')));
+          console.log('  3.', chalk.cyan(path.join(os.homedir(), '.tfq', 'config.json')));
         }
         return;
       }

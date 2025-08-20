@@ -1,10 +1,10 @@
 import { execSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-import { TestLanguage, TestFramework, TestRunResult, TestRunnerOptions } from './types';
-import { adapterRegistry } from './adapters/registry';
-import { LanguageAdapter } from './adapters/base';
-import { ConfigManager } from './config';
+import fs from 'fs';
+import path from 'path';
+import { TestLanguage, TestFramework, TestRunResult, TestRunnerOptions } from './types.js';
+import { adapterRegistry } from '../adapters/registry.js';
+import { LanguageAdapter } from '../adapters/base.js';
+import { ConfigManager } from './config.js';
 
 export class TestRunner {
   private language: TestLanguage;
@@ -111,6 +111,18 @@ export class TestRunner {
       console.warn(`Error parsing test output for ${this.language}/${this.framework}:`, error);
       return [];
     }
+  }
+  
+  getLanguage(): TestLanguage {
+    return this.language;
+  }
+  
+  getFramework(): TestFramework {
+    return this.framework;
+  }
+  
+  async runTests(options?: { pattern?: string; captureOutput?: boolean }): Promise<TestRunResult> {
+    return this.run();
   }
 
   static getLanguages(): TestLanguage[] {

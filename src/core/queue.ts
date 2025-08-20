@@ -1,7 +1,7 @@
-import { TestDatabase } from './database';
-import { QueueItem, QueueOptions, QueueStatistics } from './types';
+import { TestDatabase } from './database.js';
+import { QueueItem, QueueOptions, QueueStatistics } from './types.js';
 import { minimatch } from 'minimatch';
-import { loadConfig } from './config';
+import { loadConfig } from './config.js';
 
 export class TestFailureQueue {
   private db: TestDatabase;
@@ -23,7 +23,7 @@ export class TestFailureQueue {
     });
   }
 
-  enqueue(filePath: string, priority: number = 0): void {
+  enqueue(filePath: string, priority: number = 0, error?: string): void {
     if (!filePath || typeof filePath !== 'string') {
       throw new Error('File path must be a non-empty string');
     }
@@ -32,7 +32,7 @@ export class TestFailureQueue {
       throw new Error('Priority must be an integer');
     }
 
-    this.db.enqueue(filePath, priority);
+    this.db.enqueue(filePath, priority, error);
   }
 
   dequeue(): string | null {

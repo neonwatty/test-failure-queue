@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { BaseAdapter, TestPattern, ParsedTestOutput } from './base';
+import fs from 'fs';
+import path from 'path';
+import { BaseAdapter, TestPattern, ParsedTestOutput } from './base.js';
 
 export class RubyAdapter extends BaseAdapter {
   readonly language = 'ruby';

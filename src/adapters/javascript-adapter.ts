@@ -1,11 +1,11 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { BaseAdapter, TestPattern, ParsedTestOutput } from './base';
+import fs from 'fs';
+import path from 'path';
+import { BaseAdapter, TestPattern, ParsedTestOutput } from './base.js';
 
 export class JavaScriptAdapter extends BaseAdapter {
   readonly language = 'javascript';
   readonly supportedFrameworks = ['jest', 'mocha', 'vitest', 'jasmine', 'ava'];
-  readonly defaultFramework = 'jest';
+  readonly defaultFramework = 'vitest';
   
   detectFramework(projectPath?: string): string | null {
     const basePath = projectPath || process.cwd();
@@ -42,7 +42,7 @@ export class JavaScriptAdapter extends BaseAdapter {
       }
       
       if (testScript) {
-        return 'jest';
+        return 'vitest';
       }
       
       return null;

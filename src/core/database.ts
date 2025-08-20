@@ -1,8 +1,8 @@
 import Database from 'better-sqlite3';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import { DatabaseConfig, QueueItem } from './types';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import { DatabaseConfig, QueueItem } from './types.js';
 
 export class TestDatabase {
   private db: Database.Database;
@@ -31,25 +31,34 @@ export class TestDatabase {
         priority INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         failure_count INTEGER DEFAULT 1,
-        last_failure DATETIME DEFAULT CURRENT_TIMESTAMP
+        last_failure DATETIME DEFAULT CURRENT_TIMESTAMP,
+        error TEXT
       );
 
       CREATE INDEX IF NOT EXISTS idx_priority_created 
       ON failed_tests(priority DESC, created_at ASC);
     `);
+    
+    // Add error column if it doesn't exist (for existing databases)
+    const tableInfo = this.db.prepare("PRAGMA table_info(failed_tests)").all();
+    const hasErrorColumn = tableInfo.some((col: any) => col.name === 'error');
+    if (!hasErrorColumn) {
+      this.db.exec('ALTER TABLE failed_tests ADD COLUMN error TEXT');
+    }
   }
 
-  enqueue(filePath: string, priority: number = 0): void {
+  enqueue(filePath: string, priority: number = 0, error?: string): void {
     const stmt = this.db.prepare(`
-      INSERT INTO failed_tests (file_path, priority) 
-      VALUES (?, ?)
+      INSERT INTO failed_tests (file_path, priority, error) 
+      VALUES (?, ?, ?)
       ON CONFLICT(file_path) DO UPDATE SET
         failure_count = failure_count + 1,
         last_failure = CURRENT_TIMESTAMP,
-        priority = MAX(priority, excluded.priority)
+        priority = MAX(priority, excluded.priority),
+        error = excluded.error
     `);
     
-    stmt.run(filePath, priority);
+    stmt.run(filePath, priority, error || null);
   }
 
   dequeue(): string | null {
@@ -88,7 +97,8 @@ export class TestDatabase {
         priority,
         created_at as createdAt,
         failure_count as failureCount,
-        last_failure as lastFailure
+        last_failure as lastFailure,
+        error
       FROM failed_tests 
       ORDER BY priority DESC, created_at ASC
     `).all() as any[];
@@ -96,7 +106,8 @@ export class TestDatabase {
     return rows.map(row => ({
       ...row,
       createdAt: new Date(row.createdAt),
-      lastFailure: new Date(row.lastFailure)
+      lastFailure: new Date(row.lastFailure),
+      error: row.error || undefined
     }));
   }
 
@@ -176,7 +187,8 @@ export class TestDatabase {
         priority: oldest.priority,
         createdAt: new Date(oldest.created_at),
         failureCount: oldest.failure_count,
-        lastFailure: new Date(oldest.last_failure)
+        lastFailure: new Date(oldest.last_failure),
+        error: oldest.error || undefined
       };
     }
 
@@ -187,7 +199,8 @@ export class TestDatabase {
         priority: newest.priority,
         createdAt: new Date(newest.created_at),
         failureCount: newest.failure_count,
-        lastFailure: new Date(newest.last_failure)
+        lastFailure: new Date(newest.last_failure),
+        error: newest.error || undefined
       };
     }
 

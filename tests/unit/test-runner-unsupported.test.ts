@@ -1,29 +1,30 @@
-import { TestRunner } from '../../src/test-runner';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { TestRunner } from '../../src/core/test-runner.js';
+import fs from 'fs';
+import path from 'path';
 import { execSync } from 'child_process';
 
-jest.mock('fs');
-jest.mock('child_process');
+vi.mock('fs');
+vi.mock('child_process');
 
 describe('TestRunner - Unsupported Framework Detection', () => {
-  const mockFs = fs as jest.Mocked<typeof fs>;
-  const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+  const mockFs = fs as any;
+  const mockExecSync = execSync as any;
   
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockFs.existsSync.mockReturnValue(false);
     mockFs.readFileSync.mockReturnValue('');
     
     // Mock console.error to suppress output during tests
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    jest.spyOn(process, 'exit').mockImplementation(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(process, 'exit').mockImplementation(() => {
       throw new Error('process.exit called');
     });
   });
   
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
   
   describe('detectUnsupportedFrameworks', () => {

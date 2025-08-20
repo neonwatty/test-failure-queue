@@ -1,19 +1,27 @@
 {
   "name": "tfq",
-  "version": "1.0.3",
+  "version": "2.0.0",
   "description": "Multi-language test failure queue manager with multi-language support.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "bin": {
     "tfq": "./bin/tfq"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "jest --config jest.config.unit.js",
-    "test:integration": "jest --config jest.config.integration.js",
-    "test:all": "jest",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run clean && npm run build && npm run lint && npm run test",
@@ -38,14 +46,18 @@
   },
   "homepage": "https://github.com/neonwatty/tfq#readme",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=22.0.0"
   },
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.85",
+    "@anthropic-ai/sdk": "^0.60.0",
     "@types/minimatch": "^5.1.2",
     "better-sqlite3": "^12.2.0",
     "chalk": "^5.6.0",
     "commander": "^14.0.0",
+    "dotenv": "^17.2.1",
+    "dotenv-expand": "^12.0.2",
     "glob": "^11.0.3",
     "minimatch": "^10.0.3",
     "os-homedir": "^1.0.2"
@@ -55,10 +67,12 @@
     "@types/glob": "^8.1.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
+    "@vitest/ui": "^3.2.4",
     "jest": "^30.0.5",
     "tree-kill": "^1.2.2",
     "ts-jest": "^29.4.1",
     "tsx": "^4.20.4",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

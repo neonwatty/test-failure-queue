@@ -1,12 +1,13 @@
-import { TestAdapterRegistry } from '../../../src/adapters/registry';
-import { JavaScriptAdapter } from '../../../src/adapters/javascript-adapter';
-import { RubyAdapter } from '../../../src/adapters/ruby-adapter';
-import { PythonAdapter } from '../../../src/adapters/python-adapter';
-import { BaseAdapter } from '../../../src/adapters/base';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { TestAdapterRegistry } from '../../../src/adapters/registry.js';
+import { JavaScriptAdapter } from '../../../src/adapters/javascript-adapter.js';
+import { RubyAdapter } from '../../../src/adapters/ruby-adapter.js';
+import { PythonAdapter } from '../../../src/adapters/python-adapter.js';
+import { BaseAdapter } from '../../../src/adapters/base.js';
+import fs from 'fs';
+import path from 'path';
 
-jest.mock('fs');
+vi.mock('fs');
 
 describe('TestAdapterRegistry', () => {
   let registry: TestAdapterRegistry;
@@ -17,7 +18,7 @@ describe('TestAdapterRegistry', () => {
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('getInstance', () => {
@@ -117,8 +118,8 @@ describe('TestAdapterRegistry', () => {
   });
 
   describe('detectLanguage', () => {
-    const mockExists = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
-    const mockReaddir = fs.readdirSync as jest.MockedFunction<typeof fs.readdirSync>;
+    const mockExists = fs.existsSync as any;
+    const mockReaddir = fs.readdirSync as any;
 
     it('should detect JavaScript from package.json', () => {
       mockExists.mockImplementation((filePath) => {
@@ -297,7 +298,7 @@ describe('TestAdapterRegistry', () => {
 
   describe('detectFramework', () => {
     it('should detect framework for language', () => {
-      const mockDetect = jest.spyOn(JavaScriptAdapter.prototype, 'detectFramework')
+      const mockDetect = vi.spyOn(JavaScriptAdapter.prototype, 'detectFramework')
         .mockReturnValue('jest' as any);
 
       const framework = registry.detectFramework('javascript', '/test/project');

@@ -5,6 +5,7 @@ export interface QueueItem {
   createdAt: Date;
   failureCount: number;
   lastFailure: Date;
+  error?: string;
 }
 
 export interface QueueStatistics {
@@ -38,6 +39,7 @@ export interface ConfigFile {
   defaultLanguage?: TestLanguage;
   defaultFrameworks?: Record<TestLanguage, TestFramework>;
   testCommands?: Record<string, string>;
+  fixTestsSystemPrompt?: string;
 }
 
 export type TestLanguage = 'javascript' | 'ruby' | 'python' | 'go' | 'java';
@@ -64,6 +66,7 @@ export interface TestRunResult {
   stdout: string;
   stderr: string;
   error: string | null;
+  failureDetails?: Record<string, { error: string; line?: number }>;
 }
 
 export interface AdapterInfo {

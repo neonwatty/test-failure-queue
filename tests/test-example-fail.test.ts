@@ -1,3 +1,5 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+
 /**
  * This test file intentionally contains failing tests
  * to verify the test-runner's failure detection works correctly.

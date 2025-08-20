@@ -27,7 +27,6 @@ test-*.sh
 # Test coverage
 coverage/
 *.lcov
-.nyc_output/
 
 # IDE
 .vscode/

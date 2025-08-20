@@ -1,8 +1,8 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-import { ConfigFile, TestLanguage, TestFramework } from './types';
-import { TestAdapterRegistry } from './adapters/registry';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { ConfigFile, TestLanguage, TestFramework } from './types.js';
+import { TestAdapterRegistry } from '../adapters/registry.js';
 
 export class ConfigManager {
   private config: ConfigFile = {};
@@ -57,7 +57,7 @@ export class ConfigManager {
     
     // Validate defaultLanguage
     if (config.defaultLanguage) {
-      const supportedLanguages = registry.list().map(info => info.language);
+      const supportedLanguages = registry.list().map((info: any) => info.language);
       if (!supportedLanguages.includes(config.defaultLanguage)) {
         console.warn(`Warning: Unsupported language '${config.defaultLanguage}' in config. Supported languages: ${supportedLanguages.join(', ')}`);
         delete config.defaultLanguage;
@@ -85,6 +85,12 @@ export class ConfigManager {
     if (config.testCommands && typeof config.testCommands !== 'object') {
       console.warn('Warning: testCommands must be an object');
       delete config.testCommands;
+    }
+    
+    // Validate fixTestsSystemPrompt (ensure it's a string if provided)
+    if (config.fixTestsSystemPrompt !== undefined && typeof config.fixTestsSystemPrompt !== 'string') {
+      console.warn('Warning: fixTestsSystemPrompt must be a string');
+      delete config.fixTestsSystemPrompt;
     }
   }
 
@@ -146,7 +152,8 @@ export class ConfigManager {
         'ruby:minitest': 'rails test',
         'python:pytest': 'pytest',
         'python:unittest': 'python -m unittest'
-      }
+      },
+      fixTestsSystemPrompt: 'You are a test fixing assistant. Your task is to analyze failing tests and fix the code to make them pass.\n\nRules:\n1. Only modify the minimum necessary code to fix the test\n2. Preserve the existing code style and conventions\n3. Do not change test expectations unless they are clearly wrong\n4. Focus on fixing the implementation, not the test\n5. Ensure your fix is clean, readable, and maintainable\n6. Add necessary imports if missing\n7. Fix any syntax errors or type errors\n\nReturn your fixes as code changes with clear explanations.'
     };
 
     const configPath = targetPath || path.join(process.cwd(), '.tfqrc');

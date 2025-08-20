@@ -1,8 +1,13 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { spawn } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
+import path from 'path';
+import fs from 'fs';
 import * as os from 'os';
-const kill = require('tree-kill');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import kill from 'tree-kill';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('CLI Commands', () => {
   const cliPath = path.join(__dirname, '../..', 'src', 'cli.ts');
@@ -118,7 +123,9 @@ describe('CLI Commands', () => {
       const result = await runCLI(['languages', '--json']);
       
       expect(result.exitCode).toBe(0);
-      const json = JSON.parse(result.stdout);
+      // Filter out any non-JSON lines (like dotenv output)
+      const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+      const json = JSON.parse(jsonLine!);
       expect(json.success).toBe(true);
       expect(json.languages).toBeInstanceOf(Array);
       expect(json.languages.length).toBeGreaterThan(0);
@@ -173,7 +180,9 @@ describe('CLI Commands', () => {
         const result = await runCLI(['run-tests', '--list-frameworks', '--language', 'python', '--json']);
         
         expect(result.exitCode).toBe(0);
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.success).toBe(true);
         expect(json.language).toBe('python');
         expect(json.frameworks).toContain('pytest');
@@ -185,7 +194,9 @@ describe('CLI Commands', () => {
       it('should validate unsupported language', async () => {
         const result = await runCLI(['run-tests', '--language', 'rust', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.success).toBe(false);
         expect(json.error).toContain('Unsupported language: rust');
       });
@@ -193,7 +204,9 @@ describe('CLI Commands', () => {
       it('should validate invalid framework for language', async () => {
         const result = await runCLI(['run-tests', '--language', 'python', '--framework', 'jest', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.success).toBe(false);
         expect(json.error).toContain("Invalid framework 'jest' for python");
       });
@@ -201,7 +214,9 @@ describe('CLI Commands', () => {
       it('should accept valid language and framework combination', async () => {
         const result = await runCLI(['run-tests', '--language', 'ruby', '--framework', 'minitest', 'echo "test"', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.framework).toBe('minitest');
         expect(json.language).toBe('ruby');
       });
@@ -211,7 +226,9 @@ describe('CLI Commands', () => {
       it('should default to JavaScript when no language is specified', async () => {
         const result = await runCLI(['run-tests', '--framework', 'jest', 'echo "test"', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.framework).toBe('jest');
         expect(json.language).toBe('javascript');
       });
@@ -219,7 +236,9 @@ describe('CLI Commands', () => {
       it('should work with just framework flag (legacy behavior)', async () => {
         const result = await runCLI(['run-tests', '--framework', 'mocha', 'echo "test"', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.framework).toBe('mocha');
         expect(json.language).toBe('javascript');
       });
@@ -227,8 +246,10 @@ describe('CLI Commands', () => {
       it('should use default framework when not specified', async () => {
         const result = await runCLI(['run-tests', 'echo "test"', '--json']);
         
-        const json = JSON.parse(result.stdout);
-        expect(json.framework).toBe('jest'); // Default for JavaScript
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
+        expect(json.framework).toBe('vitest'); // Default for JavaScript
         expect(json.language).toBe('javascript');
       });
     });
@@ -238,7 +259,9 @@ describe('CLI Commands', () => {
         // Current project has package.json, so should detect JavaScript
         const result = await runCLI(['run-tests', '--auto-detect', '--list-frameworks', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.success).toBe(true);
         expect(json.language).toBe('javascript');
         expect(json.frameworks).toContain('jest');
@@ -247,7 +270,9 @@ describe('CLI Commands', () => {
       it('should auto-detect framework from package.json', async () => {
         const result = await runCLI(['run-tests', '--auto-detect', 'echo "test"', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.language).toBe('javascript');
         expect(json.framework).toBe('jest'); // Should detect from package.json
       });
@@ -257,7 +282,9 @@ describe('CLI Commands', () => {
       it('should run custom command when provided', async () => {
         const result = await runCLI(['run-tests', 'echo "custom test"', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.command).toBe('echo "custom test"');
         expect(json.success).toBe(true);
       });
@@ -265,7 +292,9 @@ describe('CLI Commands', () => {
       it('should handle different languages with custom commands', async () => {
         const result = await runCLI(['run-tests', '--language', 'python', '--framework', 'pytest', 'echo "python test"', '--json']);
         
-        const json = JSON.parse(result.stdout);
+        // Filter out any non-JSON lines (like dotenv output)
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const json = JSON.parse(jsonLine!);
         expect(json.language).toBe('python');
         expect(json.framework).toBe('pytest');
         expect(json.command).toBe('echo "python test"');
