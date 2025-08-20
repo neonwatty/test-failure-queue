@@ -12,8 +12,6 @@
   },
   "testCommands": {
     "python:pytest": "pytest",
-    "python:unittest": "python -m unittest",
-    "python:django": "python manage.py test",
-    "python:nose2": "nose2"
+    "python:unittest": "python -m unittest"
   }
 }

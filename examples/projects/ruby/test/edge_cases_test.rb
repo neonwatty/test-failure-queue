@@ -55,9 +55,8 @@ class EdgeCasesTest < Minitest::Test
   end
 
   def test_multiplication_overflow_raises_error
-    assert_raises(StandardError) do
-      @calculator.multiply(10**100, 10**100)
-    end
+    # Ruby handles big numbers gracefully, so this won't raise an error
+    # This test intentionally fails to demonstrate TFQ
     flunk "FAILING: Expects integer overflow to raise error"
   end
 

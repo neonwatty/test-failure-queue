@@ -1,7 +1,10 @@
 # python
 *.pyc
+__pycache__/
+.venv/
 
 # local
+.tfqrc
 .claude/
 .mcp.json
 *CLAUDE.md
@@ -14,6 +17,11 @@ node_modules/
 dist/
 *.db
 *.tgz
+
+# Debug and test files
+debug-*.js
+test-*.js
+test-*.sh
 
 # Test coverage
 coverage/
@@ -61,3 +69,14 @@ temp/
 .npm/
 .eslintcache
 .tsbuildinfo
+
+# Example project artifacts
+examples/projects/*/node_modules/
+examples/projects/*/venv/
+examples/projects/*/.venv/
+examples/projects/*/coverage/
+examples/projects/*/dist/
+examples/projects/rails8/tmp/
+examples/projects/rails8/log/
+examples/projects/rails8/storage/
+examples/projects/ruby/coverage/

@@ -71,6 +71,13 @@ Thumbs.db
 example-queue.db
 example.js
 
+# Debug and test files at root
+debug-*.js
+test-*.js
+test-*.sh
+*.tgz
+jest.config.*.js
+
 # Development dependencies config
 .eslintrc*
 .prettierrc*
@@ -91,3 +98,15 @@ temp/
 .serverless/
 .fusebox/
 .dynamodb/
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Example project dependencies and artifacts
+examples/projects/*/node_modules/
+examples/projects/*/venv/
+examples/projects/*/.venv/
+examples/projects/*/coverage/
+examples/projects/*/dist/
+examples/projects/rails8/

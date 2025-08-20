@@ -5,6 +5,5 @@
   "testDirectory": "tests",
   "testPattern": "**/*.test.ts",
   "priority": 1,
-  "autoDetect": true,
-  "verbose": true
+  "autoDetect": true
 }

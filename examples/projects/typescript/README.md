@@ -17,7 +17,7 @@ typescript/
 ├── src/
 │   └── calculator.ts        # TypeScript calculator implementation
 ├── tests/
-│   ├── calculator.test.ts   # Main test suite (includes 2 failing tests)
+│   ├── calculator.test.ts   # Main test suite (all tests pass)
 │   └── edge-cases.test.ts   # Edge case tests (includes 2 failing tests)
 ├── package.json             # Dependencies and scripts
 ├── tsconfig.json           # TypeScript configuration
@@ -88,15 +88,12 @@ tfq run-tests --language javascript --framework vitest
 
 ## Intentional Test Failures
 
-This project includes 4 intentional test failures to demonstrate TFQ functionality:
+This project includes 2 intentional test failures in **edge-cases.test.ts** to demonstrate TFQ functionality:
 
-1. **calculator.test.ts**:
-   - Division test expecting wrong result (expects 3 instead of 5)
-   - Complex division expecting integer instead of float
+1. **Division by zero**: Expects `Infinity` but the implementation throws an error instead
+2. **Square root of negative number**: Expects `NaN` but the implementation throws an error instead
 
-2. **edge-cases.test.ts**:
-   - Division by zero expecting Infinity (throws error instead)
-   - Square root of negative expecting NaN (throws error instead)
+All tests in **calculator.test.ts** pass successfully.
 
 ## TypeScript-Specific Features
 

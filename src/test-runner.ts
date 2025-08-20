@@ -1,4 +1,6 @@
 import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import { TestLanguage, TestFramework, TestRunResult, TestRunnerOptions } from './types';
 import { adapterRegistry } from './adapters/registry';
 import { LanguageAdapter } from './adapters/base';
@@ -12,6 +14,18 @@ export class TestRunner {
 
   constructor(options: TestRunnerOptions = {}) {
     const config = ConfigManager.getInstance();
+    
+    // Check for unsupported frameworks first
+    const unsupportedFrameworks = TestRunner.detectUnsupportedFrameworks();
+    if (unsupportedFrameworks.length > 0 && !options.skipUnsupportedCheck) {
+      console.error('\n⚠️  Unsupported test frameworks detected:\n');
+      unsupportedFrameworks.forEach(({ framework, language, suggestion }) => {
+        console.error(`  ❌ ${framework} (${language})`);
+        console.error(`     ${suggestion}\n`);
+      });
+      console.error('To bypass this check, use the --skip-unsupported-check flag (not recommended).\n');
+      process.exit(1);
+    }
     
     if (options.autoDetect) {
       const detectedLanguage = adapterRegistry.detectLanguage();
@@ -132,5 +146,91 @@ export class TestRunner {
   static detectFramework(language: TestLanguage, projectPath?: string): string | null {
     const adapter = adapterRegistry.get(language);
     return adapter.detectFramework(projectPath);
+  }
+
+  static detectUnsupportedFrameworks(projectPath?: string): { framework: string; language: string; suggestion: string }[] {
+    const basePath = projectPath || process.cwd();
+    const unsupported: { framework: string; language: string; suggestion: string }[] = [];
+
+    // Check for Python unsupported frameworks
+    const requirementsPath = path.join(basePath, 'requirements.txt');
+    const requirementsDevPath = path.join(basePath, 'requirements-dev.txt');
+    const managePyPath = path.join(basePath, 'manage.py');
+    const pipfilePath = path.join(basePath, 'Pipfile');
+    const pyprojectPath = path.join(basePath, 'pyproject.toml');
+    
+    let pythonDeps = '';
+    if (fs.existsSync(requirementsPath)) {
+      pythonDeps += fs.readFileSync(requirementsPath, 'utf-8');
+    }
+    if (fs.existsSync(requirementsDevPath)) {
+      pythonDeps += '\n' + fs.readFileSync(requirementsDevPath, 'utf-8');
+    }
+    if (fs.existsSync(pipfilePath)) {
+      pythonDeps += '\n' + fs.readFileSync(pipfilePath, 'utf-8');
+    }
+    if (fs.existsSync(pyprojectPath)) {
+      pythonDeps += '\n' + fs.readFileSync(pyprojectPath, 'utf-8');
+    }
+
+    // Check for Django
+    if (fs.existsSync(managePyPath) || pythonDeps.toLowerCase().includes('django')) {
+      unsupported.push({
+        framework: 'Django',
+        language: 'Python',
+        suggestion: 'Consider using pytest with pytest-django plugin for Django testing. Install with: pip install pytest pytest-django'
+      });
+    }
+
+    // Check for nose2
+    if (pythonDeps.toLowerCase().includes('nose2')) {
+      unsupported.push({
+        framework: 'nose2',
+        language: 'Python',
+        suggestion: 'nose2 is no longer supported. Please migrate to pytest: pip install pytest'
+      });
+    }
+
+    // Check for Ruby unsupported frameworks
+    const gemfilePath = path.join(basePath, 'Gemfile');
+    const gemfileLockPath = path.join(basePath, 'Gemfile.lock');
+    const specDir = path.join(basePath, 'spec');
+    const featuresDir = path.join(basePath, 'features');
+    
+    let rubyDeps = '';
+    if (fs.existsSync(gemfilePath)) {
+      rubyDeps = fs.readFileSync(gemfilePath, 'utf-8');
+    } else if (fs.existsSync(gemfileLockPath)) {
+      rubyDeps = fs.readFileSync(gemfileLockPath, 'utf-8');
+    }
+
+    // Check for RSpec
+    if (rubyDeps.toLowerCase().includes('rspec') || fs.existsSync(specDir)) {
+      unsupported.push({
+        framework: 'RSpec',
+        language: 'Ruby',
+        suggestion: 'RSpec is no longer supported. Please use Minitest, which is included with Ruby and Rails by default.'
+      });
+    }
+
+    // Check for Cucumber
+    if (rubyDeps.toLowerCase().includes('cucumber') || fs.existsSync(featuresDir)) {
+      unsupported.push({
+        framework: 'Cucumber',
+        language: 'Ruby',
+        suggestion: 'Cucumber is no longer supported. Consider using Minitest for your testing needs.'
+      });
+    }
+
+    // Check for Test::Unit
+    if (rubyDeps.toLowerCase().includes('test-unit') || rubyDeps.toLowerCase().includes('test::unit')) {
+      unsupported.push({
+        framework: 'Test::Unit',
+        language: 'Ruby',
+        suggestion: 'Test::Unit is no longer supported. Please migrate to Minitest, which has similar syntax and is included with Ruby.'
+      });
+    }
+
+    return unsupported;
   }
 }

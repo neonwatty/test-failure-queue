@@ -38,8 +38,8 @@ describe('Calculator', () => {
       expect(() => calculator.divide(10, 0)).toThrow('Division by zero is not allowed');
     });
 
-    test('FAILING: should handle complex division (intentional failure)', () => {
-      expect(calculator.divide(10, 3)).toBe(3);
+    test('should handle complex division', () => {
+      expect(calculator.divide(10, 3)).toBeCloseTo(3.333, 3);
     });
   });
 
@@ -56,8 +56,8 @@ describe('Calculator', () => {
       expect(calculator.sqrt(2)).toBeCloseTo(1.414, 2);
     });
 
-    test('FAILING: should handle negative square roots (intentional failure)', () => {
-      expect(calculator.sqrt(-4)).toBe(2);
+    test('should handle negative square roots', () => {
+      expect(() => calculator.sqrt(-4)).toThrow('Cannot calculate square root of negative number');
     });
 
     test('should calculate factorial correctly', () => {
@@ -67,16 +67,4 @@ describe('Calculator', () => {
     });
   });
 
-  describe('Flaky Tests', () => {
-    test('FLAKY: should randomly pass or fail', () => {
-      const random = Math.random();
-      const result = calculator.add(1, 1);
-      
-      if (random > 0.5) {
-        expect(result).toBe(2);
-      } else {
-        expect(result).toBe(3);
-      }
-    });
-  });
 });

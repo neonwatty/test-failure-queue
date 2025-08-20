@@ -23,12 +23,12 @@ describe('Calculator', () => {
       expect(calculator.multiply(0, 100)).toBe(0);
     });
 
-    it('should divide with incorrect expected value (FAILING TEST)', () => {
-      expect(calculator.divide(10, 2)).toBe(3); // This will fail - should be 5
+    it('should divide two numbers correctly', () => {
+      expect(calculator.divide(10, 2)).toBe(5);
     });
 
-    it('should handle complex division incorrectly (FAILING TEST)', () => {
-      expect(calculator.divide(7, 3)).toBe(2); // This will fail - should be ~2.333
+    it('should handle complex division', () => {
+      expect(calculator.divide(7, 3)).toBeCloseTo(2.333, 3);
     });
   });
 

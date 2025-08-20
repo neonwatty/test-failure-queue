@@ -33,18 +33,16 @@ class TestBasicOperations:
         assert calculator.multiply(-2, 3) == -6
         assert calculator.multiply(0, 100) == 0
     
-    def test_division_wrong_result(self, calculator):
-        """Test division with wrong expected result - FAILS."""
-        # This test intentionally fails to demonstrate TFQ
-        assert calculator.divide(10, 2) == 3  # Should be 5, not 3
+    def test_division(self, calculator):
+        """Test division - PASSES."""
+        assert calculator.divide(10, 2) == 5
     
-    def test_complex_calculation_error(self, calculator):
-        """Test complex calculation with error - FAILS."""
-        # This test intentionally fails
+    def test_complex_calculation(self, calculator):
+        """Test complex calculation - PASSES."""
         result = calculator.add(10, 5)
         result = calculator.multiply(result, 2)
         result = calculator.subtract(result, 10)
-        assert result == 15  # Should be 20, not 15
+        assert result == 20
 
 
 @pytest.mark.parametrize("a,b,expected", [

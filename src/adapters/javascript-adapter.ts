@@ -223,17 +223,37 @@ export class JavaScriptAdapter extends BaseAdapter {
     // Collect unique file paths (without line numbers)
     const failingFiles = new Set<string>();
     
+    // Helper to normalize paths - convert absolute to relative
+    const normalizePath = (filePath: string): string => {
+      // If path is absolute and contains the current working directory, make it relative
+      const cwd = process.cwd();
+      if (filePath.startsWith(cwd)) {
+        return filePath.slice(cwd.length + 1); // +1 to remove the leading slash
+      }
+      // If path starts with /, it might be absolute from another context
+      if (filePath.startsWith('/')) {
+        const parts = filePath.split('/');
+        const testIndex = parts.findIndex(p => 
+          p === 'test' || p === 'tests' || p === 'spec' || p === '__tests__'
+        );
+        if (testIndex !== -1) {
+          return parts.slice(testIndex).join('/');
+        }
+      }
+      return filePath;
+    };
+    
     // Add failures - only if they're test files
     failures.forEach(f => {
       if (isTestFile(f.file)) {
-        failingFiles.add(f.file);
+        failingFiles.add(normalizePath(f.file));
       }
     });
     
     // Add errors - only if they're test files
     errors.forEach(e => {
       if (isTestFile(e.file)) {
-        failingFiles.add(e.file);
+        failingFiles.add(normalizePath(e.file));
       }
     });
     

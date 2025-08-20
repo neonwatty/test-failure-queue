@@ -4,7 +4,7 @@ import { BaseAdapter, TestPattern, ParsedTestOutput } from './base';
 
 export class PythonAdapter extends BaseAdapter {
   readonly language = 'python';
-  readonly supportedFrameworks = ['pytest', 'unittest', 'django', 'nose2'];
+  readonly supportedFrameworks = ['pytest', 'unittest'];
   readonly defaultFramework = 'pytest';
   
   detectFramework(projectPath?: string): string | null {
@@ -34,23 +34,9 @@ export class PythonAdapter extends BaseAdapter {
       dependencies += '\n' + fs.readFileSync(setupPyPath, 'utf-8');
     }
     
-    // Prefer Django only if manage.py exists
-    if (fs.existsSync(managePyPath)) {
-      return 'django';
-    }
-    
-    // Check for pytest before django in dependencies
+    // Check for pytest in dependencies
     if (dependencies.includes('pytest')) {
       return 'pytest';
-    }
-    
-    // Check for django without manage.py
-    if (dependencies.includes('django')) {
-      return 'django';
-    }
-    
-    if (dependencies.includes('nose2')) {
-      return 'nose2';
     }
     
     const testsDir = path.join(basePath, 'tests');
@@ -86,36 +72,45 @@ export class PythonAdapter extends BaseAdapter {
     return 'unittest';
   }
   
+  private findVenvPython(): string | null {
+    // Check for venv in current directory
+    const venvPaths = [
+      '.venv/bin/python',
+      'venv/bin/python',
+      '.venv/Scripts/python.exe',
+      'venv/Scripts/python.exe'
+    ];
+    
+    for (const venvPath of venvPaths) {
+      if (fs.existsSync(venvPath)) {
+        return venvPath;
+      }
+    }
+    return null;
+  }
+  
   getTestCommand(framework: string, testPath?: string): string {
     const basePath = testPath || '';
+    
+    // Check for Python executable in venv
+    const venvPython = this.findVenvPython();
+    const pythonCmd = venvPython || 'python';
     
     switch (framework.toLowerCase()) {
       case 'pytest':
         if (testPath) {
-          return `pytest ${basePath}`;
+          return venvPython ? `${pythonCmd} -m pytest ${basePath}` : `pytest ${basePath}`;
         }
-        return 'pytest';
+        return venvPython ? `${pythonCmd} -m pytest` : 'pytest';
         
       case 'unittest':
         if (testPath) {
-          return `python -m unittest ${basePath}`;
+          return `${pythonCmd} -m unittest ${basePath}`;
         }
-        return 'python -m unittest discover';
-        
-      case 'django':
-        if (testPath) {
-          return `python manage.py test ${basePath}`;
-        }
-        return 'python manage.py test';
-        
-      case 'nose2':
-        if (testPath) {
-          return `nose2 ${basePath}`;
-        }
-        return 'nose2';
+        return `${pythonCmd} -m unittest discover`;
         
       default:
-        return 'python -m pytest';
+        return `${pythonCmd} -m pytest`;
     }
   }
   
@@ -150,59 +145,24 @@ export class PythonAdapter extends BaseAdapter {
       case 'unittest':
         return [
           {
-            pattern: /FAIL:\s+(.+?)\s+\((.+?)\)/g,
+            // Match FAIL: followed by test name, then extract file from traceback
+            // This captures both the test name and finds the file in the traceback
+            pattern: /FAIL:\s+([^\n]+)[\s\S]*?File\s+"([^"]+)"/g,
             type: 'failure',
             extractLocation: (match) => ({
-              file: match[1] + ' (' + match[2] + ')',
-              line: undefined
+              file: match[2],  // Use the file path from traceback
+              line: undefined,
+              testName: match[1].trim()  // Keep test name for reference
             })
           },
           {
-            pattern: /ERROR:\s+(.+?)\s+\((.+?)\)/g,
+            // Match ERROR: followed by test name, then extract file from traceback
+            pattern: /ERROR:\s+([^\n]+)[\s\S]*?File\s+"([^"]+)"/g,
             type: 'error',
             extractLocation: (match) => ({
-              file: match[1] + ' (' + match[2] + ')',
-              line: undefined
-            })
-          }
-        ];
-        
-      case 'django':
-        return [
-          {
-            pattern: /FAIL:\s+(.+?)\s+\((.+?)\)/g,
-            type: 'failure',
-            extractLocation: (match) => ({
-              file: match[1] + ' (' + match[2] + ')',
-              line: undefined
-            })
-          },
-          {
-            pattern: /ERROR:\s+(.+?)\s+\((.+?)\)/g,
-            type: 'error',
-            extractLocation: (match) => ({
-              file: match[1] + ' (' + match[2] + ')',
-              line: undefined
-            })
-          }
-        ];
-        
-      case 'nose2':
-        return [
-          {
-            pattern: /FAIL:\s+(.+\.\w+)/g,
-            type: 'failure',
-            extractLocation: (match) => ({
-              file: match[1],
-              line: undefined
-            })
-          },
-          {
-            pattern: /ERROR:\s+(.+\.\w+)/g,
-            type: 'error',
-            extractLocation: (match) => ({
-              file: match[1],
-              line: undefined
+              file: match[2],  // Use the file path from traceback
+              line: undefined,
+              testName: match[1].trim()  // Keep test name for reference
             })
           }
         ];
@@ -257,46 +217,56 @@ export class PythonAdapter extends BaseAdapter {
       );
     };
     
-    // Collect unique file paths - keep test identifiers for pytest
+    // Collect unique file paths
     const failingFiles = new Set<string>();
     
+    // Helper to normalize paths - convert absolute to relative
+    const normalizePath = (filePath: string): string => {
+      // If path is absolute and contains the current working directory, make it relative
+      const cwd = process.cwd();
+      if (filePath.startsWith(cwd)) {
+        return filePath.slice(cwd.length + 1); // +1 to remove the leading slash
+      }
+      // If path starts with /, it might be absolute from another context
+      if (filePath.startsWith('/')) {
+        const parts = filePath.split('/');
+        const testIndex = parts.findIndex(p => p === 'test' || p === 'tests' || p.startsWith('test_'));
+        if (testIndex !== -1) {
+          return parts.slice(testIndex).join('/');
+        }
+      }
+      return filePath;
+    };
+    
     // Add failures - only if they're test files
-    // For pytest, keep the full test identifier (file::test) from rawFailures
-    // For other frameworks, include line numbers if available
+    // For pytest, extract just the file path (not the full test identifier)
+    // For other frameworks, extract just the file path (not line numbers)
     if (framework === 'pytest') {
-      // Use rawFailures for pytest to keep the full format
+      // Extract just the file path from pytest's file::test format
       rawFailures.forEach(f => {
-        if (isTestFile(f.file.split('::')[0])) {
-          failingFiles.add(f.file);
+        const filePath = f.file.split('::')[0];
+        if (isTestFile(filePath)) {
+          failingFiles.add(normalizePath(filePath));
         }
       });
       rawErrors.forEach(e => {
-        if (isTestFile(e.file.split('::')[0])) {
-          failingFiles.add(e.file);
+        const filePath = e.file.split('::')[0];
+        if (isTestFile(filePath)) {
+          failingFiles.add(normalizePath(filePath));
         }
       });
     } else {
       // For other frameworks, use the processed failures/errors
       failures.forEach(f => {
-        const filePath = f.file.split(':')[0]; // Get base file path
+        const filePath = f.file.split(':')[0]; // Get base file path without line numbers
         if (isTestFile(filePath)) {
-          // Include line number if available
-          if (f.line) {
-            failingFiles.add(`${filePath}:${f.line}`);
-          } else {
-            failingFiles.add(filePath);
-          }
+          failingFiles.add(normalizePath(filePath));
         }
       });
       errors.forEach(e => {
-        const filePath = e.file.split(':')[0]; // Get base file path
+        const filePath = e.file.split(':')[0]; // Get base file path without line numbers
         if (isTestFile(filePath)) {
-          // Include line number if available
-          if (e.line) {
-            failingFiles.add(`${filePath}:${e.line}`);
-          } else {
-            failingFiles.add(filePath);
-          }
+          failingFiles.add(normalizePath(filePath));
         }
       });
     }
@@ -342,8 +312,6 @@ export class PythonAdapter extends BaseAdapter {
         break;
         
       case 'unittest':
-      case 'django':
-      case 'nose2':
         const unittestMatch = output.match(/Ran\s+(\d+)\s+tests?/);
         if (unittestMatch) {
           summary.total = parseInt(unittestMatch[1], 10);

@@ -106,15 +106,11 @@ tfq run-tests "pnpm test" --language javascript --framework vitest
 
 #### Supported Frameworks
 - **Minitest**: Ruby's built-in testing library, default for Rails
-- **RSpec**: BDD framework for Ruby
-- **Test::Unit**: Traditional unit testing framework
-- **Cucumber**: BDD acceptance testing
 
 #### Auto-Detection
 TFQ automatically detects Ruby projects by checking:
 1. `Gemfile` for testing gems
-2. Presence of `spec/` directory (RSpec)
-3. Presence of `test/` directory (Minitest/Test::Unit)
+2. Presence of `test/` directory (Minitest)
 4. Rails project structure
 
 #### Common Commands
@@ -126,12 +122,9 @@ tfq run-tests --language ruby --auto-detect
 tfq run-tests "rails test" --language ruby --framework minitest
 tfq run-tests "rails test test/models" --language ruby --framework minitest
 
-# RSpec
-tfq run-tests --language ruby --framework rspec
-tfq run-tests "bundle exec rspec spec/models" --language ruby --framework rspec
-
-# Cucumber features
-tfq run-tests "bundle exec cucumber" --language ruby --framework cucumber
+# Additional Minitest examples
+tfq run-tests "bundle exec minitest" --language ruby --framework minitest
+tfq run-tests "ruby -I test test/models/*_test.rb" --language ruby --framework minitest
 ```
 
 #### Configuration Example
@@ -139,12 +132,10 @@ tfq run-tests "bundle exec cucumber" --language ruby --framework cucumber
 {
   "defaultLanguage": "ruby",
   "defaultFrameworks": {
-    "ruby": "rspec"
+    "ruby": "minitest"
   },
   "testCommands": {
-    "ruby:minitest": "rails test",
-    "ruby:rspec": "bundle exec rspec",
-    "ruby:cucumber": "bundle exec cucumber"
+    "ruby:minitest": "rails test"
   }
 }
 ```
@@ -154,15 +145,12 @@ tfq run-tests "bundle exec cucumber" --language ruby --framework cucumber
 #### Supported Frameworks
 - **pytest** (default): Feature-rich testing framework
 - **unittest**: Python's built-in testing framework
-- **Django**: Django's test runner
-- **nose2**: unittest extension
 
 #### Auto-Detection
 TFQ automatically detects Python projects by checking:
 1. `requirements.txt`, `setup.py`, or `pyproject.toml`
 2. Presence of pytest.ini or setup.cfg with pytest configuration
-3. Django's manage.py file
-4. Test file patterns (test_*.py, *_test.py)
+3. Test file patterns (test_*.py, *_test.py)
 
 #### Common Commands
 ```bash
@@ -178,12 +166,8 @@ tfq run-tests "python -m pytest -v" --language python --framework pytest
 tfq run-tests "python -m unittest" --language python --framework unittest
 tfq run-tests "python -m unittest discover" --language python --framework unittest
 
-# Django
-tfq run-tests "python manage.py test" --language python --framework django
-tfq run-tests "./manage.py test apps.users" --language python --framework django
-
-# nose2
-tfq run-tests "python -m nose2" --language python --framework nose2
+# Additional unittest examples
+tfq run-tests "python -m unittest test_module.TestClass" --language python --framework unittest
 ```
 
 #### Configuration Example
@@ -195,9 +179,7 @@ tfq run-tests "python -m nose2" --language python --framework nose2
   },
   "testCommands": {
     "python:pytest": "pytest -v",
-    "python:unittest": "python -m unittest discover",
-    "python:django": "python manage.py test --parallel",
-    "python:nose2": "nose2 -v"
+    "python:unittest": "python -m unittest discover"
   }
 }
 ```
@@ -240,15 +222,10 @@ When multiple frameworks are detected, TFQ uses this priority:
 
 **Python:**
 1. pytest (if pytest installed or pytest.ini exists)
-2. Django (if manage.py exists)
-3. unittest (default Python framework)
-4. nose2 (if nose2 in requirements)
+2. unittest (default Python framework)
 
 **Ruby:**
-1. RSpec (if rspec in Gemfile or spec/ directory exists)
-2. Minitest (if Rails project or test/ directory exists)
-3. Cucumber (if cucumber in Gemfile)
-4. Test::Unit (fallback)
+1. Minitest (if Rails project or test/ directory exists)
 
 ### Overriding Auto-Detection
 
@@ -330,8 +307,8 @@ tfq run-tests --language python --framework pytest
 # Run unittest
 tfq run-tests "python -m unittest" --language python --framework unittest
 
-# Run Django tests
-tfq run-tests "python manage.py test" --language python --framework django
+# Run Python tests with custom command
+tfq run-tests "python -m pytest tests/" --language python --framework pytest
 
 # Run with auto-add
 tfq run-tests --language python --framework pytest --auto-add
@@ -342,17 +319,14 @@ tfq run-tests --language python --framework pytest --auto-add
 # Auto-detect Ruby framework
 tfq run-tests --language ruby --auto-detect
 
-# Run RSpec
-tfq run-tests --language ruby --framework rspec
+# Run Minitest
+tfq run-tests --language ruby --framework minitest
 
 # Run Rails tests with Minitest
 tfq run-tests "rails test" --language ruby --framework minitest
 
-# Run Cucumber features
-tfq run-tests --language ruby --framework cucumber
-
 # Run with auto-add
-tfq run-tests --language ruby --framework rspec --auto-add --priority 5
+tfq run-tests --language ruby --framework minitest --auto-add --priority 5
 ```
 
 ### Adding Failed Tests Manually
@@ -453,12 +427,12 @@ Output:
     },
     {
       "language": "ruby",
-      "supportedFrameworks": ["minitest", "rspec", "test-unit", "cucumber"],
-      "defaultFramework": "rspec"
+      "supportedFrameworks": ["minitest"],
+      "defaultFramework": "minitest"
     },
     {
       "language": "python",
-      "supportedFrameworks": ["pytest", "unittest", "django", "nose2"],
+      "supportedFrameworks": ["pytest", "unittest"],
       "defaultFramework": "pytest"
     }
   ]
@@ -475,7 +449,7 @@ tfq run-tests --auto-detect --json
 tfq run-tests --language python --json
 
 # Specify both language and framework
-tfq run-tests --language ruby --framework rspec --json
+tfq run-tests --language ruby --framework minitest --json
 ```
 
 Output:
@@ -699,7 +673,7 @@ tfq run-tests --language ruby --framework minitest --auto-add --priority 10
 
 # Or run specific test suites with different frameworks
 tfq run-tests "npm run test:unit" --framework jest --auto-add
-tfq run-tests "bundle exec rspec spec/models" --language ruby --framework rspec --auto-add
+tfq run-tests "rails test test/models" --language ruby --framework minitest --auto-add
 tfq run-tests "python -m pytest tests/unit" --language python --framework pytest --auto-add
 
 # Process queue
@@ -731,7 +705,7 @@ tfq run-tests --language ruby --framework rspec --auto-add
 # Mixed language project example
 tfq run-tests "npm test" --language javascript --auto-add
 tfq run-tests "pytest" --language python --auto-add
-tfq run-tests "bundle exec rspec" --language ruby --auto-add
+tfq run-tests "rails test" --language ruby --auto-add
 
 # Get summary for AI
 tfq list --json > failed-tests.json
@@ -803,7 +777,6 @@ The library searches for configuration files in the following order (first found
     "javascript:mocha": "npx mocha",
     "javascript:vitest": "npx vitest run",
     "ruby:minitest": "rails test",
-    "ruby:rspec": "bundle exec rspec",
     "python:pytest": "pytest",
     "python:unittest": "python -m unittest"
   }
@@ -915,7 +888,6 @@ For test commands, the precedence is:
   "testCommands": {
     "python:pytest": "python -m pytest -v",
     "python:unittest": "python -m unittest discover",
-    "python:django": "python manage.py test --parallel"
   }
 }
 ```
@@ -930,8 +902,6 @@ For test commands, the precedence is:
   },
   "testCommands": {
     "ruby:minitest": "rails test",
-    "ruby:rspec": "bundle exec rspec --format progress",
-    "ruby:cucumber": "bundle exec cucumber --format progress"
   }
 }
 ```
@@ -944,14 +914,12 @@ For test commands, the precedence is:
   "defaultFrameworks": {
     "javascript": "jest",
     "python": "pytest",
-    "ruby": "rspec"
+    "ruby": "minitest"
   },
   "testCommands": {
     "javascript:jest": "npm test",
     "javascript:vitest": "pnpm test",
     "python:pytest": "poetry run pytest",
-    "python:django": "python manage.py test",
-    "ruby:rspec": "bundle exec rspec",
     "ruby:minitest": "rails test"
   }
 }
@@ -968,7 +936,7 @@ For test commands, the precedence is:
   "testCommands": {
     "javascript:jest": "npm run test:ci",
     "python:pytest": "pytest --cov --junit-xml=report.xml",
-    "ruby:rspec": "bundle exec rspec --format RspecJunitFormatter"
+    "ruby:minitest": "rails test --format progress"
   }
 }
 ```
@@ -1004,7 +972,7 @@ tfq run-tests "npm run test:custom" --language javascript --framework jest
 - Use explicit command: `tfq run-tests "rails test" --language ruby --framework minitest`
 - Check that `rails` or `bundle exec` commands work
 
-**Problem: RSpec vs Minitest confusion**
+**Problem: Test framework confusion**
 ```bash
 # Force specific framework
 tfq run-tests --language ruby --framework rspec
@@ -1014,7 +982,7 @@ tfq run-tests --language ruby --framework minitest
 **Problem: Bundle exec required**
 ```bash
 # Always use bundle exec for Ruby projects
-tfq run-tests "bundle exec rspec" --language ruby --framework rspec
+tfq run-tests "rails test" --language ruby --framework minitest
 tfq run-tests "bundle exec rails test" --language ruby --framework minitest
 ```
 
@@ -1025,11 +993,11 @@ tfq run-tests "bundle exec rails test" --language ruby --framework minitest
 - Use module execution: `tfq run-tests "python -m pytest" --language python`
 - Activate virtual environment before running tfq
 
-**Problem: Django tests not found**
+**Problem: Python tests not found**
 ```bash
-# Use manage.py explicitly
-tfq run-tests "python manage.py test" --language python --framework django
-tfq run-tests "./manage.py test" --language python --framework django
+# Use pytest or unittest explicitly
+tfq run-tests "python -m pytest" --language python --framework pytest
+tfq run-tests "python -m unittest" --language python --framework unittest
 ```
 
 **Problem: pytest vs unittest detection**

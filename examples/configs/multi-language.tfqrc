@@ -9,7 +9,7 @@
   "defaultLanguage": "javascript",
   "defaultFrameworks": {
     "javascript": "jest",
-    "ruby": "rspec",
+    "ruby": "minitest",
     "python": "pytest",
     "go": "go",
     "java": "junit"
@@ -21,12 +21,7 @@
     "javascript:jasmine": "npx jasmine",
     "javascript:ava": "npx ava",
     "ruby:minitest": "rails test",
-    "ruby:rspec": "bundle exec rspec",
-    "ruby:test-unit": "ruby -I test",
-    "ruby:cucumber": "bundle exec cucumber",
     "python:pytest": "pytest",
-    "python:unittest": "python -m unittest",
-    "python:django": "python manage.py test",
-    "python:nose2": "nose2"
+    "python:unittest": "python -m unittest"
   }
 }

@@ -8,27 +8,59 @@ This project implements a basic Calculator class with arithmetic operations (add
 
 ## Setup Instructions
 
-### 1. Create Virtual Environment
+### Using uv (Recommended)
+
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager that simplifies virtual environment management.
+
+#### 1. Install uv (if not already installed)
 
 ```bash
-python -m venv venv
+# On macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or using pip
+pip install uv
 ```
 
-### 2. Activate Virtual Environment
+#### 2. Create Virtual Environment and Install Dependencies
+
+```bash
+# Create a virtual environment
+uv venv .venv
+
+# Install dependencies
+uv pip install -r requirements.txt
+```
+
+#### 3. Activate Virtual Environment (Optional)
+
+The virtual environment is automatically used by TFQ when it detects `.venv` in the project directory. However, you can activate it manually if needed:
 
 **On macOS/Linux:**
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 **On Windows:**
 ```bash
-venv\Scripts\activate
+.venv\Scripts\activate
 ```
 
-### 3. Install Dependencies
+### Alternative: Traditional Python venv
+
+If you prefer using the standard Python tools:
 
 ```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate it (macOS/Linux)
+source venv/bin/activate
+
+# Activate it (Windows)
+venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -91,16 +123,13 @@ tfq run-tests --language python --framework pytest
 ## Test Structure
 
 ### `test_calculator.py`
-- **Passing Tests (7):**
-  - Basic arithmetic operations (add, subtract, multiply)
+- **All tests pass (9 tests):**
+  - Basic arithmetic operations (add, subtract, multiply, division)
   - Parametrized addition tests
   - Parametrized division tests
+  - Complex calculation workflow
   - History tracking
   - Clear history functionality
-
-- **Failing Tests (2):**
-  - `test_division_wrong_result`: Expects wrong division result
-  - `test_complex_calculation_error`: Complex calculation with incorrect assertion
 
 ### `test_advanced.py`
 - **Passing Tests (7):**
@@ -163,9 +192,7 @@ def test_performance():
 ```bash
 $ ../../bin/tfq run-tests --auto-detect
 Running tests for Python (pytest)...
-Found 6 test failures
-Added to queue: test_calculator.py::TestBasicOperations::test_division_wrong_result
-Added to queue: test_calculator.py::TestBasicOperations::test_complex_calculation_error
+Found 4 test failures in test_advanced.py
 Added to queue: test_advanced.py::TestExceptionHandling::test_division_by_zero_wrong_exception
 Added to queue: test_advanced.py::TestEdgeCases::test_float_precision_issue
 Added to queue: test_advanced.py::TestStressScenarios::test_many_operations_performance
@@ -176,19 +203,20 @@ Added to queue: test_advanced.py::TestStressScenarios::test_history_memory_limit
 ```bash
 $ ../../bin/tfq show
 Test Failure Queue Status:
-┌─────────────────────────────────────────────────┬──────────┬───────────┐
-│ Test                                            │ Priority │ Retries   │
-├─────────────────────────────────────────────────┼──────────┼───────────┤
-│ test_calculator.py::test_division_wrong_result │ 10       │ 0         │
-│ test_calculator.py::test_complex_calculation   │ 10       │ 0         │
-│ test_advanced.py::test_float_precision_issue   │ 10       │ 0         │
-└─────────────────────────────────────────────────┴──────────┴───────────┘
+┌─────────────────────────────────────────────────────┬──────────┬───────────┐
+│ Test                                                │ Priority │ Retries   │
+├─────────────────────────────────────────────────────┼──────────┼───────────┤
+│ test_advanced.py::test_division_by_zero_wrong_exception │ 10    │ 0         │
+│ test_advanced.py::test_float_precision_issue       │ 10       │ 0         │
+│ test_advanced.py::test_many_operations_performance │ 10       │ 0         │
+│ test_advanced.py::test_history_memory_limit        │ 10       │ 0         │
+└─────────────────────────────────────────────────────┴──────────┴───────────┘
 ```
 
 3. **Process Failed Tests:**
 ```bash
 $ ../../bin/tfq dequeue
-Processing: test_calculator.py::test_division_wrong_result
+Processing: test_advanced.py::test_division_by_zero_wrong_exception
 Test still failing after retry
 ```
 
@@ -199,7 +227,7 @@ $ pytest --cov=calculator --cov-report=term-missing
 ========================= test session starts =========================
 collected 20 tests
 
-test_calculator.py ........F.F...                                  [ 70%]
+test_calculator.py .........                                       [ 45%]
 test_advanced.py ...F.F.FF.x.s                                    [100%]
 
 ---------- coverage: platform darwin, python 3.x.x ----------

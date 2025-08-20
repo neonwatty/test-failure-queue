@@ -26,8 +26,8 @@ class CalculatorTest < Minitest::Test
     assert_equal(-2, @calculator.subtract(3, 5))
   end
 
-  def test_subtract_incorrectly_expects_wrong_result
-    assert_equal 60, @calculator.subtract(100, 50), "FAILING: This test expects wrong subtraction result"
+  def test_subtract_correctly
+    assert_equal 50, @calculator.subtract(100, 50)
   end
 
   def test_multiply_returns_product_of_two_numbers
@@ -57,8 +57,8 @@ class CalculatorTest < Minitest::Test
     assert_equal 'Cannot divide by zero', error.message
   end
 
-  def test_divide_expects_integer_when_returns_float
-    assert_equal 3, @calculator.divide(10, 3), "FAILING: Expects integer division when it returns float"
+  def test_divide_returns_float
+    assert_in_delta 3.333, @calculator.divide(10, 3), 0.01
   end
 
   def test_power_calculates_exponentiation_correctly

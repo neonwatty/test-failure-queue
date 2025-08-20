@@ -1,9 +1,0 @@
-#!/usr/bin/env ruby
-
-# Mock rails command that delegates to our test runner
-if ARGV[0] == 'test'
-  require_relative 'run_tests'
-else
-  puts "Mock rails command - only 'test' is supported"
-  exit 1
-end

@@ -372,6 +372,7 @@ program
   .option('--list-frameworks', 'List available frameworks for the language')
   .option('--auto-add', 'Automatically add failing tests to queue')
   .option('-p, --priority <number>', 'Priority for auto-added tests', '0')
+  .option('--skip-unsupported-check', 'Skip checking for unsupported frameworks (not recommended)')
   .option('--json', 'Output in JSON format')
   .action((command: string | undefined, options) => {
     try {
@@ -479,7 +480,8 @@ program
       const runner = new TestRunner({
         command: testCommand,
         language: language as TestLanguage,
-        framework: framework as TestFramework
+        framework: framework as TestFramework,
+        skipUnsupportedCheck: options.skipUnsupportedCheck
       });
 
       if (!useJsonOutput(options)) {
@@ -541,6 +543,45 @@ program
       }
 
       process.exit(result.exitCode);
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command('check-compatibility')
+  .description('Check for unsupported test frameworks in the project')
+  .option('--json', 'Output in JSON format')
+  .action((options) => {
+    try {
+      const unsupported = TestRunner.detectUnsupportedFrameworks();
+      
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ 
+          success: unsupported.length === 0,
+          compatible: unsupported.length === 0,
+          unsupportedFrameworks: unsupported 
+        }));
+      } else {
+        if (unsupported.length === 0) {
+          console.log(chalk.green('✓'), 'No unsupported frameworks detected. Your project is compatible with tfq!');
+        } else {
+          console.log(chalk.yellow('⚠️'), 'Unsupported test frameworks detected:\n');
+          unsupported.forEach(({ framework, language, suggestion }) => {
+            console.log(`  ${chalk.red('✗')} ${chalk.cyan(framework)} (${language})`);
+            console.log(`     ${chalk.gray(suggestion)}\n`);
+          });
+          console.log(chalk.gray('To continue using these frameworks with tfq, you can:'));
+          console.log(chalk.gray('1. Migrate to a supported framework (recommended)'));
+          console.log(chalk.gray('2. Use --skip-unsupported-check flag with run-tests (not recommended)'));
+          process.exit(1);
+        }
+      }
     } catch (error: any) {
       if (useJsonOutput(options)) {
         console.log(JSON.stringify({ success: false, error: error.message }));

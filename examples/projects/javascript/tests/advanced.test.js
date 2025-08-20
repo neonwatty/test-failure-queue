@@ -82,18 +82,6 @@ describe('Advanced Calculator Features', () => {
       expect(end - start).toBeLessThan(100);
     });
 
-    test('FLAKY: should complete calculations within time limit', () => {
-      const randomDelay = Math.random() * 10;
-      const start = Date.now();
-      
-      for (let i = 0; i < 1000000; i++) {
-        calculator.add(i, i);
-      }
-      
-      const duration = Date.now() - start + randomDelay;
-      
-      expect(duration).toBeLessThan(50);
-    });
   });
 
   describe('Array Operations', () => {

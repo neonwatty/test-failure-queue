@@ -10,7 +10,10 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "test": "jest --testPathIgnorePatterns='test-example-fail'",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --config jest.config.unit.js",
+    "test:integration": "jest --config jest.config.integration.js",
+    "test:all": "jest",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "prepublishOnly": "npm run clean && npm run lint && npm run test && npm run build",

@@ -41,24 +41,4 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  # FAILING TESTS - Intentional failures to demonstrate tfq
-
-  test "FAILING: should return paginated results" do
-    get users_url
-    assert_response :success
-    json = JSON.parse(response.body)
-    assert json["pagination"], "Expected pagination metadata in response"
-  end
-
-  test "FAILING: should handle user not found gracefully" do
-    get user_url(id: 999999)
-    assert_response :not_found
-  end
-
-  test "FAILING: should filter users by age" do
-    get users_url, params: { age: 18 }
-    assert_response :success
-    json = JSON.parse(response.body)
-    assert json.all? { |user| user["age"] >= 18 }, "Expected only adult users"
-  end
 end

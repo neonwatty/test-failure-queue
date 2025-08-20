@@ -49,6 +49,7 @@ export interface TestRunnerOptions {
   framework?: TestFramework;
   command?: string;
   autoDetect?: boolean;
+  skipUnsupportedCheck?: boolean;
 }
 
 export interface TestRunResult {

@@ -14,8 +14,8 @@ TFQ (Test Failure Queue) is a command-line tool designed to help developers effi
 - **Multi-Language Support**: JavaScript/TypeScript, Python, and Ruby
 - **Multiple Test Frameworks**: 
   - JavaScript: Jest, Mocha, Vitest, Jasmine, AVA
-  - Python: pytest, unittest, Django, nose2
-  - Ruby: Minitest, RSpec, Test::Unit, Cucumber
+  - Python: pytest, unittest
+  - Ruby: Minitest
 - **Auto-Detection**: Automatically detects language and test framework
 - **Persistent Storage**: Uses SQLite to maintain test failure history across sessions
 - **Priority Management**: Assign priorities to different test files
@@ -44,14 +44,14 @@ npm install -g tfq
 - **Default command**: `npm test`
 
 ### Python
-- **Frameworks**: pytest, unittest, Django test runner, nose2
+- **Frameworks**: pytest, unittest
 - **Auto-detection**: via requirements.txt, setup.py, or pyproject.toml
 - **Default command**: `pytest` or `python -m unittest`
 
 ### Ruby
-- **Frameworks**: Minitest, RSpec, Test::Unit, Cucumber
+- **Frameworks**: Minitest
 - **Auto-detection**: via Gemfile or directory structure
-- **Default command**: `bundle exec rspec` or `rails test`
+- **Default command**: `rails test`
 
 ## Documentation
 
@@ -78,7 +78,7 @@ tfq run-tests --auto-detect
 # Specify language
 tfq run-tests --language javascript --framework jest
 tfq run-tests --language python --framework pytest
-tfq run-tests --language ruby --framework rspec
+tfq run-tests --language ruby --framework minitest
 
 # List available frameworks for a language
 tfq run-tests --list-frameworks --language python
@@ -174,12 +174,12 @@ tfq run-tests --auto-detect --auto-add
 # Language-specific examples
 tfq run-tests --language javascript --framework jest --auto-add
 tfq run-tests --language python --framework pytest --auto-add
-tfq run-tests --language ruby --framework rspec --auto-add
+tfq run-tests --language ruby --framework minitest --auto-add
 
 # Work through failures one by one
 while tfq next; do
   FILE=$(tfq next --json | jq -r '.filePath')
-  npm test "$FILE"  # or pytest, rspec, etc.
+  npm test "$FILE"  # or pytest, minitest, etc.
   if [ $? -eq 0 ]; then
     tfq resolve "$FILE"
   fi

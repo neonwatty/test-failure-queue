@@ -144,7 +144,6 @@ export class ConfigManager {
         'javascript:mocha': 'npx mocha',
         'javascript:vitest': 'npx vitest run',
         'ruby:minitest': 'rails test',
-        'ruby:rspec': 'bundle exec rspec',
         'python:pytest': 'pytest',
         'python:unittest': 'python -m unittest'
       }

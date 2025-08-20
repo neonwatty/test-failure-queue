@@ -59,7 +59,7 @@ Auto-detect language and framework:
 
 Explicitly specify Minitest:
 ```bash
-../../../bin/tfq run-tests --language ruby --framework minitest
+
 ```
 
 List available frameworks:
@@ -88,7 +88,7 @@ The `Calculator` class implements:
 
 **calculator_test.rb**: Main functionality tests
 - 25+ test cases covering all calculator methods
-- 2 intentionally failing tests to demonstrate TFQ queue management
+- All tests pass
 - Uses Minitest assertions and test helpers
 
 **edge_cases_test.rb**: Boundary and edge case testing  
@@ -138,13 +138,13 @@ The `.tfqrc` file configures TFQ for Minitest:
 1. Run tests to see failures:
 ```bash
 ruby -Ilib:test test/**/*_test.rb
-# Shows 7 failures across both test files
+# Shows 5 failures in edge_cases_test.rb
 ```
 
 2. Queue failures with TFQ:
 ```bash
 ../../bin/tfq run-tests --auto-detect
-# TFQ captures and queues the 7 failing tests
+# TFQ captures and queues the 5 failing tests from edge_cases_test.rb
 ```
 
 3. View queued failures:
@@ -182,7 +182,7 @@ EdgeCasesTest#test_division_expects_exact_fraction [FAIL]
 
 Finished in 0.015625s, 2880.0000 runs/s, 3200.0000 assertions/s.
 
-45 runs, 50 assertions, 7 failures, 0 errors, 0 skips
+45 runs, 50 assertions, 5 failures, 0 errors, 0 skips
 ```
 
 ## Debugging Tips
