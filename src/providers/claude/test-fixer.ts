@@ -41,19 +41,16 @@ export class TestFixer {
       maxRetries: config.maxRetries ?? 3,
       maxIterations: config.maxIterations ?? 10,
       systemPrompt: config.systemPrompt ?? this.getDefaultSystemPrompt(),
-      apiKey: config.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '',
       verbose: config.verbose ?? false,
       dryRun: config.dryRun ?? false,
-      useClaudeCodeSDK: config.useClaudeCodeSDK ?? false,
+      useClaudeCodeSDK: config.useClaudeCodeSDK ?? true,
     };
 
-    if (!this.config.apiKey) {
-      throw new Error(
-        'API key is required. Set ANTHROPIC_API_KEY environment variable or pass apiKey in config.'
-      );
-    }
-
-    this.claude = new ClaudeCodeClient(this.config.apiKey);
+    // Using Claude Code SDK - no API key needed
+    this.claude = new ClaudeCodeClient({
+      useClaudeCodeSDK: this.config.useClaudeCodeSDK,
+      verbose: this.config.verbose
+    });
   }
 
   async fixFailedTests(): Promise<FixResult> {

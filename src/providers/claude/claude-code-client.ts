@@ -7,11 +7,13 @@ export type { FixResponse } from './types.js';
 
 export class ClaudeCodeClient {
   private totalTokensUsed = { input: 0, output: 0 };
-  private apiKey: string;
+  private useClaudeCodeSDK: boolean;
+  private verbose: boolean;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
-    process.env.ANTHROPIC_API_KEY = apiKey;
+  constructor(options?: { useClaudeCodeSDK?: boolean; verbose?: boolean }) {
+    // Using Claude Code SDK - no API key needed
+    this.useClaudeCodeSDK = options?.useClaudeCodeSDK ?? true;
+    this.verbose = options?.verbose ?? false;
   }
 
   async requestFix(prompt: FixPrompt): Promise<FixResponse> {
@@ -26,18 +28,29 @@ export class ClaudeCodeClient {
         prompt: userPrompt,
         options: {
           customSystemPrompt: systemPrompt,
-          maxTurns: 1,
-          permissionMode: 'bypassPermissions',
-          allowedTools: ['Read', 'Write', 'Edit']
+          maxTurns: 1
         }
       })) {
-        if (message.type === 'result' && message.subtype === 'success') {
-          responseText = message.result;
-          if (message.usage) {
-            tokenUsage.input = message.usage.input_tokens || 0;
-            tokenUsage.output = message.usage.output_tokens || 0;
+        // Handle different message types
+        if (message.type === 'assistant') {
+          // Assistant messages are informational, log them if verbose
+          if (this.verbose) {
+            console.log('Claude:', (message as any).content);
+          }
+        } else if (message.type === 'result') {
+          if (message.subtype === 'success') {
+            responseText = message.result;
+            if (message.usage) {
+              tokenUsage.input = message.usage.input_tokens || 0;
+              tokenUsage.output = message.usage.output_tokens || 0;
+            }
+          } else {
+            // Handle error cases more gracefully
+            console.error(`Claude Code SDK error: ${message.subtype}`);
+            throw new Error(`Query failed: ${message.subtype}`);
           }
         }
+        // Ignore other message types (user, system, etc.)
       }
 
       this.totalTokensUsed.input += tokenUsage.input;

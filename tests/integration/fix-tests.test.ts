@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
-import { TestFixer } from '../../src/integrations/claude/test-fixer.js';
+import { TestFixer } from '../../src/providers/claude/test-fixer.js';
 import { TestFailureQueue } from '../../src/core/queue.js';
 import { TestRunner } from '../../src/core/test-runner.js';
 import fs from 'fs';
@@ -379,7 +379,7 @@ test('simple test', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle missing API key gracefully', () => {
+    it('should handle Claude Code SDK integration', () => {
       delete process.env.ANTHROPIC_API_KEY;
       
       runner = new TestRunner({
@@ -387,9 +387,10 @@ test('simple test', () => {
         framework: 'jest',
       });
 
+      // Should not throw when using Claude Code SDK (no API key required)
       expect(() => {
         new TestFixer(queue, runner);
-      }).toThrow('API key is required');
+      }).not.toThrow();
     });
 
     it('should handle invalid test files', async () => {

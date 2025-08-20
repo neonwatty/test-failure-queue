@@ -1302,20 +1302,20 @@ npm test tests/integration/fix-tests.test.ts
 npm run test:coverage
 ```
 
-### API Key Configuration
+### Claude Code SDK Configuration
 
-The Claude Code SDK integration uses the same Anthropic API key that you would use for any Claude API access:
+The Claude Code SDK provider works seamlessly when running inside a Claude Code session:
 
-1. **Get your API key** from the [Anthropic Console](https://console.anthropic.com/)
-2. **Set the environment variable**:
-   ```bash
-   export ANTHROPIC_API_KEY="your-api-key-here"
-   ```
+1. **Inside Claude Code** - No API key needed, the SDK uses your active session
+2. **Standalone Terminal Usage**:
+   - Install Claude Code from [claude.ai/code](https://claude.ai/code)
+   - Authenticate Claude Code on your system
+   - The SDK will use your Claude Code authentication automatically
 
-This single API key works for:
-- Direct Claude API calls
-- Claude Code SDK integration in TFQ (`tfq fix-tests`)
-- Any other tools using the Anthropic API
+The provider uses:
+- Claude Code SDK for AI-powered test fixing (`tfq fix-tests`)
+- No API key management needed when running inside Claude Code
+- Automatic authentication from your Claude Code installation
 
 ### Running Tests
 

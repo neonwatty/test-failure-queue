@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
-import { ClaudeCodeClient } from '../../src/integrations/claude/claude-code-client.js';
-import { FixPrompt } from '../../src/integrations/claude/test-fixer.js';
+import { ClaudeCodeClient } from '../../src/providers/claude/claude-code-client.js';
+import { FixPrompt } from '../../src/providers/claude/test-fixer.js';
 import * as claudeCode from '@anthropic-ai/claude-code';
 
 vi.mock('@anthropic-ai/claude-code');
@@ -11,21 +11,25 @@ describe('ClaudeCodeClient (SDK)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.ANTHROPIC_API_KEY = 'test-api-key';
     
     mockQuery = claudeCode.query as any;
-    client = new ClaudeCodeClient('test-api-key');
+    client = new ClaudeCodeClient({ useClaudeCodeSDK: true });
   });
 
   afterEach(() => {
-    delete process.env.ANTHROPIC_API_KEY;
+    // Clean up
   });
 
   describe('constructor', () => {
-    it('should initialize with API key and set environment variable', () => {
-      const testKey = 'my-test-key';
-      const testClient = new ClaudeCodeClient(testKey);
-      expect(process.env.ANTHROPIC_API_KEY).toBe(testKey);
+    it('should initialize with Claude Code SDK enabled by default', () => {
+      const testClient = new ClaudeCodeClient();
+      // Client should be created successfully without API key
+      expect(testClient).toBeDefined();
+    });
+
+    it('should accept useClaudeCodeSDK option', () => {
+      const testClient = new ClaudeCodeClient({ useClaudeCodeSDK: true });
+      expect(testClient).toBeDefined();
     });
   });
 
@@ -87,8 +91,6 @@ describe('ClaudeCodeClient (SDK)', () => {
         options: {
           customSystemPrompt: expect.any(String),
           maxTurns: 1,
-          permissionMode: 'bypassPermissions',
-          allowedTools: ['Read', 'Write', 'Edit'],
         },
       });
     });

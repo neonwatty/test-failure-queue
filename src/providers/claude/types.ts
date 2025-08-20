@@ -17,7 +17,6 @@ export interface TestFixerConfig {
   maxRetries?: number;
   maxIterations?: number;
   systemPrompt?: string;
-  apiKey?: string;
   verbose?: boolean;
   dryRun?: boolean;
   useClaudeCodeSDK?: boolean;

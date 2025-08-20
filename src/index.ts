@@ -8,5 +8,5 @@ export {
   ConfigFile
 } from './core/types.js';
 export { ConfigManager, loadConfig } from './core/config.js';
-export { TestFixer, TestFixerConfig } from './integrations/claude/test-fixer.js';
-export { ClaudeCodeClient } from './integrations/claude/claude-code-client.js';
+export { TestFixer, TestFixerConfig } from './providers/claude/test-fixer.js';
+export { ClaudeCodeClient } from './providers/claude/claude-code-client.js';

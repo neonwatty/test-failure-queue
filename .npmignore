@@ -105,9 +105,9 @@ __pycache__/
 *.pyc
 
 # Example project dependencies and artifacts
-examples/projects/*/node_modules/
-examples/projects/*/venv/
-examples/projects/*/.venv/
-examples/projects/*/coverage/
-examples/projects/*/dist/
-examples/projects/rails8/
+examples/core/*/node_modules/
+examples/core/*/venv/
+examples/core/*/.venv/
+examples/core/*/coverage/
+examples/core/*/dist/
+examples/core/rails8/

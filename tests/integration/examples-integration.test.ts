@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('Example Projects Integration Tests', () => {
-  const examplesPath = path.join(__dirname, '../..', 'examples', 'projects');
+  const examplesPath = path.join(__dirname, '../..', 'examples', 'core');
   const tfqBin = path.join(__dirname, '../..', 'bin', 'tfq');
   let tempDbPath: string;
 

@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { TestFixer, TestFixerConfig } from '../../src/integrations/claude/test-fixer.js';
+import { TestFixer, TestFixerConfig } from '../../src/providers/claude/test-fixer.js';
 import { TestFailureQueue } from '../../src/core/queue.js';
 import { TestRunner } from '../../src/core/test-runner.js';
-import { ClaudeCodeClient } from '../../src/integrations/claude/claude-code-client.js';
+import { ClaudeCodeClient } from '../../src/providers/claude/claude-code-client.js';
 
-vi.mock('../../src/integrations/claude/claude-code-client.js');
+vi.mock('../../src/providers/claude/claude-code-client.js');
 
 describe('System Prompt Configuration Precedence', () => {
   let queue: TestFailureQueue;

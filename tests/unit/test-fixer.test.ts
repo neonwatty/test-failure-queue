@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
-import { TestFixer, TestFixerConfig } from '../../src/integrations/claude/test-fixer.js';
+import { TestFixer, TestFixerConfig } from '../../src/providers/claude/test-fixer.js';
 import { TestFailureQueue } from '../../src/core/queue.js';
 import { TestRunner } from '../../src/core/test-runner.js';
-import { ClaudeCodeClient } from '../../src/integrations/claude/claude-code-client.js';
+import { ClaudeCodeClient } from '../../src/providers/claude/claude-code-client.js';
 import fs from 'fs';
 import path from 'path';
 
-vi.mock('../../src/integrations/claude/claude-code-client.js');
+vi.mock('../../src/providers/claude/claude-code-client.js');
 vi.mock('fs');
 vi.mock('chalk', () => ({
   default: {
@@ -63,18 +63,12 @@ describe('TestFixer', () => {
 
   describe('constructor', () => {
     it('should initialize with default config', () => {
-      process.env.ANTHROPIC_API_KEY = 'test-key';
-      
       const fixer = new TestFixer(queue, runner);
       expect(fixer).toBeDefined();
-    });
-
-    it('should throw error if API key is not provided', () => {
-      delete process.env.ANTHROPIC_API_KEY;
-      
-      expect(() => new TestFixer(queue, runner)).toThrow(
-        'API key is required. Set ANTHROPIC_API_KEY environment variable or pass apiKey in config.'
-      );
+      expect(ClaudeCodeClient).toHaveBeenCalledWith({
+        useClaudeCodeSDK: true,
+        verbose: false
+      });
     });
 
     it('should accept custom configuration', () => {
@@ -82,9 +76,9 @@ describe('TestFixer', () => {
         maxRetries: 5,
         maxIterations: 20,
         systemPrompt: 'Custom prompt',
-        apiKey: 'custom-key',
         verbose: true,
         dryRun: true,
+        useClaudeCodeSDK: true,
       };
       
       const fixer = new TestFixer(queue, runner, config);
@@ -95,7 +89,6 @@ describe('TestFixer', () => {
       const customPrompt = 'This is a custom system prompt for test fixing';
       const config: TestFixerConfig = {
         systemPrompt: customPrompt,
-        apiKey: 'test-key',
       };
       
       const fixer = new TestFixer(queue, runner, config);
@@ -103,9 +96,7 @@ describe('TestFixer', () => {
     });
 
     it('should use default system prompt when not provided', () => {
-      const config: TestFixerConfig = {
-        apiKey: 'test-key',
-      };
+      const config: TestFixerConfig = {};
       
       const fixer = new TestFixer(queue, runner, config);
       const defaultPrompt = (fixer as any).config.systemPrompt;
@@ -116,7 +107,6 @@ describe('TestFixer', () => {
 
   describe('fixFailedTests', () => {
     beforeEach(() => {
-      process.env.ANTHROPIC_API_KEY = 'test-key';
       fixer = new TestFixer(queue, runner);
     });
 
@@ -183,7 +173,6 @@ describe('TestFixer', () => {
     it('should respect max iterations', async () => {
       const config: TestFixerConfig = {
         maxIterations: 2,
-        apiKey: 'test-key',
       };
       
       fixer = new TestFixer(queue, runner, config);
@@ -208,7 +197,6 @@ describe('TestFixer', () => {
 
   describe('processQueue', () => {
     beforeEach(() => {
-      process.env.ANTHROPIC_API_KEY = 'test-key';
       fixer = new TestFixer(queue, runner);
     });
 
@@ -282,14 +270,12 @@ describe('TestFixer', () => {
 
   describe('attemptFix', () => {
     beforeEach(() => {
-      process.env.ANTHROPIC_API_KEY = 'test-key';
       fixer = new TestFixer(queue, runner);
     });
 
     it('should handle dry run mode', async () => {
       const config: TestFixerConfig = {
         dryRun: true,
-        apiKey: 'test-key',
       };
       
       fixer = new TestFixer(queue, runner, config);
@@ -378,7 +364,6 @@ describe('TestFixer', () => {
 
   describe('generateFixPrompt', () => {
     beforeEach(() => {
-      process.env.ANTHROPIC_API_KEY = 'test-key';
       fixer = new TestFixer(queue, runner);
     });
 
@@ -386,7 +371,6 @@ describe('TestFixer', () => {
       const customPrompt = 'Special instructions for AI';
       const config: TestFixerConfig = {
         systemPrompt: customPrompt,
-        apiKey: 'test-key',
       };
       
       fixer = new TestFixer(queue, runner, config);
@@ -442,7 +426,6 @@ describe('TestFixer', () => {
 
   describe('getSummary', () => {
     beforeEach(() => {
-      process.env.ANTHROPIC_API_KEY = 'test-key';
       fixer = new TestFixer(queue, runner);
     });
 

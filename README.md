@@ -192,19 +192,22 @@ npm install -g tfq
 
 ### Claude Code SDK Setup
 
-To use the Claude Code test fixing feature, you'll need an Claude Code API key:
+The test fixing feature uses the Claude Code SDK. To use it:
 
-1. Get your API key from [Anthropic Console](https://console.anthropic.com/)
-2. Set the environment variable:
-   ```bash
-   export ANTHROPIC_API_KEY="your-api-key-here"
-   ```
-   Or create a `.env` file in your project:
-   ```
-   ANTHROPIC_API_KEY=your-api-key-here
-   ```
+1. **Install Claude Code** from [claude.ai/code](https://claude.ai/code)
+2. **Authenticate Claude Code** on your system (follow the setup instructions)
+3. **Use tfq normally** - The SDK will automatically use your Claude Code authentication
 
-**⚠️ Cost Warning**: AI features use the Anthropic API which incurs costs. 
+```bash
+# Once Claude Code is installed and authenticated on your system:
+npm install -g tfq
+tfq fix-tests  # Will use your Claude Code authentication automatically
+```
+
+**Note**: 
+- The Claude Code SDK (`@anthropic-ai/claude-code`) and `tsx` are included as dependencies when you install `tfq`
+- You can run `tfq` from any terminal - it will use your system's Claude Code installation
+- No API keys are needed - authentication is handled by Claude Code 
 
 ## Supported Languages
 
@@ -363,18 +366,18 @@ const runner = new TestRunner();
 const config = new ConfigManager();
 ```
 
-### Claude AI Integration
+### Claude AI Provider
 
-The AI-powered test fixing features are provided through the Claude integration:
+The AI-powered test fixing features are provided through the Claude Code SDK provider:
 
 ```typescript
-import { TestFixer } from 'tfq/integrations/claude/test-fixer';
-import { ClaudeCodeClient } from 'tfq/integrations/claude/claude-code-client';
+import { TestFixer } from 'tfq/providers/claude/test-fixer';
+import { ClaudeCodeClient } from 'tfq/providers/claude/claude-code-client';
 
-// Initialize the test fixer
+// Initialize the test fixer (no API key needed when using Claude Code SDK)
 const fixer = new TestFixer({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  maxRetries: 3
+  maxRetries: 3,
+  useClaudeCodeSDK: true
 });
 
 // Fix failing tests
@@ -474,8 +477,23 @@ npm run build
 ### Testing
 
 ```bash
+# Run unit and integration tests (default)
 npm test
+
+# Run specific test suites
+npm run test:unit        # Unit tests only
+npm run test:integration # Integration tests only
+npm run test:providers   # Provider tests (requires Claude Code)
+
+# Run all tests including provider tests
+npm run test:all
+
+# Other test options
+npm run test:watch      # Watch mode
+npm run test:coverage   # With coverage report
 ```
+
+**Note**: Provider tests are separated from the default test suite because they may require Claude Code to be installed and authenticated. The main `npm test` command runs only unit and integration tests to ensure CI/CD pipelines work without additional setup.
 
 ### Project Structure
 
@@ -490,11 +508,11 @@ tfq/
 │   │   ├── types.ts          # TypeScript types
 │   │   ├── test-runner.ts    # Multi-language test execution
 │   │   └── config.ts         # Configuration management
-│   ├── integrations/         # Third-party integrations
-│   │   └── claude/           # Claude AI integration
+│   ├── providers/            # AI service providers
+│   │   └── claude/           # Claude Code SDK provider
 │   │       ├── test-fixer.ts         # AI-powered test fixing
-│   │       ├── claude-code-client.ts # Claude AI client wrapper
-│   │       └── types.ts              # Claude integration types
+│   │       ├── claude-code-client.ts # Claude Code SDK client
+│   │       └── types.ts              # Provider types
 │   └── adapters/             # Language-specific adapters
 │       ├── base.ts           # Base adapter interface
 │       ├── registry.ts       # Adapter registry

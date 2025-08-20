@@ -52,7 +52,7 @@ npm run test:verbose
 #### Local TFQ (from project root)
 ```bash
 # Navigate to this directory
-cd examples/projects/javascript
+cd examples/core/javascript
 
 # Run tests with local TFQ
 ../../../bin/tfq run-tests --auto-detect

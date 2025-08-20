@@ -16,9 +16,11 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/cli.ts",
-    "test": "vitest run",
+    "test": "vitest run tests/unit tests/integration",
+    "test:all": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
+    "test:providers": "vitest run tests/providers",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
@@ -51,7 +53,6 @@
   "type": "module",
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.85",
-    "@anthropic-ai/sdk": "^0.60.0",
     "@types/minimatch": "^5.1.2",
     "better-sqlite3": "^12.2.0",
     "chalk": "^5.6.0",
@@ -60,7 +61,8 @@
     "dotenv-expand": "^12.0.2",
     "glob": "^11.0.3",
     "minimatch": "^10.0.3",
-    "os-homedir": "^1.0.2"
+    "os-homedir": "^1.0.2",
+    "tsx": "^4.20.4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -71,7 +73,6 @@
     "jest": "^30.0.5",
     "tree-kill": "^1.2.2",
     "ts-jest": "^29.4.1",
-    "tsx": "^4.20.4",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

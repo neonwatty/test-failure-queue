@@ -7,7 +7,7 @@ import { QueueItem, ConfigFile, TestFramework, TestLanguage } from './core/types
 import { ConfigManager, loadConfig } from './core/config.js';
 import { TestRunner } from './core/test-runner.js';
 import { adapterRegistry } from './adapters/registry.js';
-import { TestFixer, TestFixerConfig } from './integrations/claude/test-fixer.js';
+import { TestFixer, TestFixerConfig } from './providers/claude/test-fixer.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -732,21 +732,8 @@ program
         systemPrompt: options.systemPrompt || config.fixTestsSystemPrompt,
         verbose: options.verbose,
         dryRun: options.dryRun,
-        apiKey: process.env.ANTHROPIC_API_KEY,
+        useClaudeCodeSDK: true,
       };
-
-      if (!fixerConfig.apiKey) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ 
-            success: false, 
-            error: 'ANTHROPIC_API_KEY environment variable is required' 
-          }));
-        } else {
-          console.error(chalk.red('Error:'), 'ANTHROPIC_API_KEY environment variable is required');
-          console.error(chalk.gray('Set it in your .env file or environment'));
-        }
-        process.exit(1);
-      }
 
       if (!useJsonOutput(options)) {
         console.log(chalk.bold('\n🤖 Starting AI-powered test fixing...\n'));
