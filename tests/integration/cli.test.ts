@@ -274,7 +274,7 @@ describe('CLI Commands', () => {
         const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
         const json = JSON.parse(jsonLine!);
         expect(json.language).toBe('javascript');
-        expect(json.framework).toBe('jest'); // Should detect from package.json
+        expect(json.framework).toBe('vitest'); // Should detect from package.json
       });
     });
 

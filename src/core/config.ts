@@ -86,12 +86,6 @@ export class ConfigManager {
       console.warn('Warning: testCommands must be an object');
       delete config.testCommands;
     }
-    
-    // Validate fixTestsSystemPrompt (ensure it's a string if provided)
-    if (config.fixTestsSystemPrompt !== undefined && typeof config.fixTestsSystemPrompt !== 'string') {
-      console.warn('Warning: fixTestsSystemPrompt must be a string');
-      delete config.fixTestsSystemPrompt;
-    }
   }
 
   private expandPath(filePath: string): string {
@@ -152,8 +146,7 @@ export class ConfigManager {
         'ruby:minitest': 'rails test',
         'python:pytest': 'pytest',
         'python:unittest': 'python -m unittest'
-      },
-      fixTestsSystemPrompt: 'You are a test fixing assistant. Your task is to analyze failing tests and fix the code to make them pass.\n\nRules:\n1. Only modify the minimum necessary code to fix the test\n2. Preserve the existing code style and conventions\n3. Do not change test expectations unless they are clearly wrong\n4. Focus on fixing the implementation, not the test\n5. Ensure your fix is clean, readable, and maintainable\n6. Add necessary imports if missing\n7. Fix any syntax errors or type errors\n\nReturn your fixes as code changes with clear explanations.'
+      }
     };
 
     const configPath = targetPath || path.join(process.cwd(), '.tfqrc');

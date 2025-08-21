@@ -42,7 +42,6 @@ export interface ConfigFile {
   defaultLanguage?: TestLanguage;
   defaultFrameworks?: Record<TestLanguage, TestFramework>;
   testCommands?: Record<string, string>;
-  fixTestsSystemPrompt?: string;
 }
 
 export type TestLanguage = 'javascript' | 'ruby' | 'python' | 'go' | 'java';

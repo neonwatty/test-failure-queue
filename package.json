@@ -57,20 +57,14 @@
     "better-sqlite3": "^12.2.0",
     "chalk": "^5.6.0",
     "commander": "^14.0.0",
-    "glob": "^11.0.3",
     "minimatch": "^10.0.3",
-    "os-homedir": "^1.0.2",
     "tsx": "^4.20.4"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/glob": "^8.1.0",
-    "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
     "@vitest/ui": "^3.2.4",
-    "jest": "^30.0.5",
     "tree-kill": "^1.2.2",
-    "ts-jest": "^29.4.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

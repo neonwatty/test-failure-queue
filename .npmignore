@@ -5,7 +5,7 @@ plans/
 
 # Configuration files
 tsconfig.json
-jest.config.js
+vitest.config.ts
 .tfqrc
 
 # Development files
@@ -77,7 +77,7 @@ debug-*.js
 test-*.js
 test-*.sh
 *.tgz
-jest.config.*.js
+vitest.config.*.ts
 
 # Development dependencies config
 .eslintrc*

@@ -10,6 +10,7 @@ plans/
 .mcp.json
 *CLAUDE.md
 .plans/
+.mcp.json
 
 # Dependencies
 node_modules/

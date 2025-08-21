@@ -31,35 +31,6 @@ describe('ConfigManager', () => {
       expect(manager.getDefaultLanguage()).toBe('python');
     });
 
-    it('should load fixTestsSystemPrompt from config', () => {
-      const customPrompt = 'Custom AI assistant prompt for fixing tests';
-      const config = {
-        fixTestsSystemPrompt: customPrompt
-      };
-      fs.writeFileSync(configPath, JSON.stringify(config));
-      
-      const manager = new ConfigManager(configPath);
-      const loaded = manager.getConfig();
-      expect(loaded.fixTestsSystemPrompt).toBe(customPrompt);
-    });
-
-    it('should validate fixTestsSystemPrompt is a string', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
-      const config = {
-        fixTestsSystemPrompt: 123 as any // Invalid type
-      };
-      fs.writeFileSync(configPath, JSON.stringify(config));
-      
-      const manager = new ConfigManager(configPath);
-      const loaded = manager.getConfig();
-      expect(loaded.fixTestsSystemPrompt).toBeUndefined();
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Warning: fixTestsSystemPrompt must be a string'
-      );
-      
-      warnSpy.mockRestore();
-    });
-
     it('should load defaultFrameworks from config', () => {
       const config = {
         defaultFrameworks: {
@@ -158,17 +129,6 @@ describe('ConfigManager', () => {
       expect(config.testCommands).toHaveProperty('python:pytest');
     });
 
-    it('should include fixTestsSystemPrompt in default config', () => {
-      const manager = new ConfigManager();
-      manager.createDefaultConfig(configPath);
-      
-      const content = fs.readFileSync(configPath, 'utf-8');
-      const config = JSON.parse(content);
-      
-      expect(config.fixTestsSystemPrompt).toBeDefined();
-      expect(config.fixTestsSystemPrompt).toContain('test fixing assistant');
-      expect(config.fixTestsSystemPrompt).toContain('analyze failing tests');
-    });
   });
 
   describe('Existing functionality', () => {
