@@ -3,8 +3,8 @@
  */
 
 function add(a, b) {
-  // BUG: Should return a + b, not a - b
-  return a - b;
+  // Fixed: Now correctly returns a + b
+  return a + b;
 }
 
 function subtract(a, b) {
@@ -13,18 +13,21 @@ function subtract(a, b) {
 }
 
 function multiply(a, b) {
-  // BUG: Should return a * b, not a + b
-  return a + b;
+  // Fixed: Now correctly returns a * b
+  return a * b;
 }
 
 function divide(a, b) {
-  // BUG: Should handle division by zero
+  // Fixed: Now handles division by zero
+  if (b === 0) {
+    throw new Error('Division by zero is not allowed');
+  }
   return a / b;
 }
 
 function power(a, b) {
-  // BUG: Should use Math.pow or ** operator
-  return a * b;
+  // Fixed: Now uses Math.pow for exponentiation
+  return Math.pow(a, b);
 }
 
 module.exports = {

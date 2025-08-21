@@ -1,0 +1,50 @@
+# JavaScript/TypeScript Project Configuration
+# Place this file in your project root as .tfqrc
+
+# Default language for the project
+defaultLanguage: javascript
+
+# Default test framework
+defaultFrameworks:
+  javascript: jest
+  # Alternatives: mocha, vitest, jasmine, ava
+
+# Test runner configuration
+testCommand: npm test
+testTimeout: 120000  # 2 minutes
+
+# Queue management settings
+defaultPriority: 5
+maxRetries: 3
+
+# File patterns to include/exclude
+includePatterns:
+  - "**/*.test.js"
+  - "**/*.spec.js"
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+  - "**/*.test.jsx"
+  - "**/*.test.tsx"
+
+excludePatterns:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/coverage/**"
+
+# Claude Code provider settings
+provider: claude-code
+fixTestsOptions:
+  verbose: true
+  dryRun: false
+  maxIterations: 10
+
+# Custom system prompt for JavaScript projects
+fixTestsSystemPrompt: |
+  You are fixing JavaScript/TypeScript test failures.
+  Follow these guidelines:
+  - Use modern ES6+ syntax
+  - Preserve existing code style
+  - Add appropriate type annotations for TypeScript
+  - Ensure all edge cases are handled
+  - Follow the project's existing patterns

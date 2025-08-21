@@ -1,137 +1,151 @@
-# Provider Demonstrations
+# TFQ Provider Demos - Quick Start Guide
 
-This directory contains simple demonstration projects showing how TFQ's various providers (like Claude Code SDK) can automatically fix failing tests.
+Get up and running with TFQ - find failed tests and fix them one at a time leveraging Claude Code.
 
-## Prerequisites
+## Prerequisites Checklist
 
-1. **Install Claude Code** from [claude.ai/code](https://claude.ai/code)
-2. **Authenticate** Claude Code on your system
-3. **Install TFQ** globally: `npm install -g tfq`
+- [ ] **Claude Code** installed from [claude.ai/code](https://claude.ai/code)
+- [ ] **Node.js** 14+ installed
+- [ ] **Python** 3.6+ installed (for Python demo)
+- [ ] **TFQ** installed globally: `npm install -g tfq`
 
-## Demo Projects
-
-### 1. math-assistant.ts
-A standalone TypeScript example showing direct Claude Code SDK usage.
+## End-to-End Demo
 
 ```bash
-npx tsx math-assistant.ts
+# Clone or navigate to the examples
+cd examples/providers
+
+# Run the complete multi-language demo
+./run-all-demos.sh
 ```
 
-### 2. javascript-calculator/
-A JavaScript project with intentionally broken calculator functions.
+This shows TFQ collecting and then fixing bugs in both JavaScript and Python projects leveraging Claude Code.
 
-**The Problem:** The calculator's add function incorrectly subtracts instead of adds.
+## ⚡ Language-Specific Quick Starts
 
+### JavaScript
 ```bash
 cd javascript-calculator
-npm install
-npm test  # See the failing test
-
-# Fix with TFQ
-tfq run-tests --auto-add
-tfq fix-tests
-npm test  # Test should now pass!
+./demo.sh  # Interactive walkthrough
 ```
 
-### 3. python-math-utils/
-A Python project with broken math utility functions.
+**Or manually in 3 commands:**
+```bash
+npm install && npm test                    # See failures
+tfq run-tests --auto-detect --auto-add     # Queue failures
+tfq fix-tests --verbose                    # Fix with Claude Code
+```
 
-**The Problem:** Various math functions have logic errors.
-
+### Python
 ```bash
 cd python-math-utils
-pip install -r requirements.txt
-pytest  # See failing tests
-
-# Fix with TFQ
-tfq run-tests --language python --auto-add
-tfq fix-tests
-pytest  # Tests should pass!
+./demo.sh  # Interactive walkthrough
 ```
 
-## How It Works
-
-1. **Test Detection**: TFQ runs your tests and detects failures
-2. **Queue Management**: Failed tests are added to a persistent queue
-3. **AI Analysis**: Claude Code SDK analyzes the test and implementation
-4. **Automatic Fixing**: The SDK suggests and applies fixes
-5. **Verification**: Tests are re-run to confirm the fix
-
-## Example Fix Session
-
+**Or manually in 4 commands:**
 ```bash
-$ cd javascript-calculator
-$ tfq run-tests --auto-add --priority 5
-
-Running: npm test
-==================
-FAIL calculator.test.js
-  ✗ add function should add two numbers
-
-1 test failed
-Added to queue: calculator.test.js
-
-$ tfq fix-tests --verbose
-
-🤖 Starting AI-powered test fixing...
-Processing: calculator.test.js
-  Reading test file...
-  Found related file: calculator.js
-  Requesting fix from Claude Code SDK...
-  
-  Claude: I see the issue. The add function is using subtraction (-) 
-          instead of addition (+). Let me fix that.
-  
-  Applying fix...
-  Verifying...
-  ✓ Test now passes!
-
-Fix Summary:
-✓ Fixed: 1 test
-Total time: 2.3s
-
-$ npm test
-
-PASS calculator.test.js
-  ✓ add function should add two numbers (2ms)
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt && pytest  # See failures
+tfq run-tests --language python --auto-add # Queue failures
+tfq fix-tests --verbose                    # Fix with AI
 ```
 
-## Creating Your Own Demo
+## Copy-Paste Workflow
 
-To create a new demo project:
-
-1. Create a simple project with clear test failures
-2. Make the bugs obvious and fixable
-3. Include a README explaining the scenario
-4. Test that TFQ can successfully fix it
-
-Example structure:
-```
-my-demo/
-├── README.md         # Explain the demo
-├── package.json      # Dependencies and test script
-├── index.js          # Implementation with bugs
-└── index.test.js     # Tests that reveal the bugs
+### For a general JavaScript / Typescript Project
+```bash
+# In your project directory with failing tests:
+tfq run-tests --auto-detect --auto-add && tfq fix-tests --verbose
 ```
 
-## Tips for Best Results
+### For a general Python Project
+```bash
+# In your project directory with failing tests:
+tfq run-tests --language python --framework pytest --auto-add && tfq fix-tests --verbose
+```
 
-1. **Clear Test Names**: Use descriptive test names that explain expected behavior
-2. **Simple Bugs**: Start with obvious logic errors (wrong operators, off-by-one errors)
-3. **Good Error Messages**: Tests should have clear assertion messages
-4. **Isolated Functions**: Each function should have a single responsibility
+### For Ruby Projects
+```bash
+# In your project directory with failing tests:
+tfq run-tests --language ruby --framework minitest --auto-add && tfq fix-tests --verbose
+```
 
-## Troubleshooting
+## Essential Commands
 
-If fixes aren't working:
+| Command | What it does |
+|---------|--------------|
+| `tfq run-tests --auto-add` | Run tests and queue failures |
+| `tfq list` | View queued test failures |
+| `tfq stats` | Show queue statistics |
+| `tfq fix-tests --dry-run` | Preview fixes without applying |
+| `tfq fix-tests --verbose` | Apply fixes with detailed output |
+| `tfq clear` | Clear the queue |
+| `tfq --help` | Show all commands |
 
-1. **Check Claude Code**: Ensure it's running and authenticated
-2. **Verbose Mode**: Use `tfq fix-tests --verbose` for detailed output
-3. **Dry Run**: Try `tfq fix-tests --dry-run` to preview without changes
-4. **Simple Cases First**: Start with the simplest failing test
+## Interactive Features
 
-## Learn More
+### See What Will Be Fixed
+```bash
+tfq fix-tests --dry-run
+```
 
-- [TFQ Documentation](../../README.md)
-- [Claude Code SDK Setup](../../docs/CLAUDE_CODE_SETUP.md)
-- [Provider Tests](../../tests/providers/)
+### Watch Claude Code Think
+```bash
+tfq fix-tests --verbose
+```
+
+### Process High-Priority Items First
+```bash
+tfq add failing-test.js --priority 10
+tfq fix-tests  # Processes priority 10 first
+```
+
+## Troubleshooting - Quick Fixes
+
+### Claude Code Not Working?
+```bash
+# 1. Check Claude Code is running
+ps aux | grep -i claude
+
+# 2. Try opening Claude Code desktop app
+# 3. Sign in if needed
+```
+
+### Tests Not Detected?
+```bash
+# Explicitly specify language and framework
+tfq run-tests --language javascript --framework jest --auto-add
+tfq run-tests --language python --framework pytest --auto-add
+```
+
+### Queue Issues?
+```bash
+tfq list   # Check what's queued
+tfq clear  # Start fresh
+tfq stats  # See queue statistics
+```
+
+### Python Virtual Environment?
+```bash
+# Always activate venv first
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate     # Windows
+```
+
+## Resetting to Broken State
+
+Try to go from broken tests to all passing:
+
+1. `cd javascript-calculator`
+2. `./reset.sh` (reset to broken state)
+3. `tfq run-tests --auto-detect --auto-add`
+4. `tfq fix-tests`
+5. `npm test` (verify all pass)
+
+## Next Steps
+
+- 📖 Read the [full documentation](../../README.md)
+- 🔧 Explore [configuration options](configs/)
+- 🎓 Try the [JavaScript demo](javascript-calculator/) in detail
+- 🐍 Try the [Python demo](python-math-utils/) in detail

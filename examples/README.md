@@ -8,10 +8,6 @@ This directory contains example projects and demonstrations for TFQ (Test Failur
 **Core Integration Test Projects** - Full-featured test projects used by TFQ's integration test suite to verify core functionality across different languages and frameworks.
 
 - `javascript/` - JavaScript project with Jest tests
-- `python/` - Python project with pytest tests  
-- `ruby/` - Ruby project with Minitest tests
-- `rails8/` - Rails 8 application with Minitest tests
-- `typescript/` - TypeScript project with Vitest tests
 
 These projects contain intentionally failing tests to verify TFQ's ability to:
 - Detect test failures

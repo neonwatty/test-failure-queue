@@ -34,7 +34,7 @@ export class ClaudeCodeClient {
         // Handle different message types
         if (message.type === 'assistant') {
           // Assistant messages are informational, log them if verbose
-          if (this.verbose) {
+          if (this.verbose && (message as any).content) {
             console.log('Claude:', (message as any).content);
           }
         } else if (message.type === 'result') {
@@ -47,7 +47,12 @@ export class ClaudeCodeClient {
           } else {
             // Handle error cases more gracefully
             console.error(`Claude Code SDK error: ${message.subtype}`);
-            throw new Error(`Query failed: ${message.subtype}`);
+            // Don't throw for max_turns, just continue with empty response
+            if (message.subtype === 'error_max_turns') {
+              console.warn('Max turns reached, proceeding with available response');
+            } else {
+              throw new Error(`Query failed: ${message.subtype}`);
+            }
           }
         }
         // Ignore other message types (user, system, etc.)

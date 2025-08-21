@@ -532,7 +532,9 @@ program
               console.log(chalk.blue('\nAdding failures to queue...'));
               
               result.failingTests.forEach(test => {
-                queue.enqueue(test, priority);
+                const absolutePath = path.resolve(test);
+                // Pass stderr as error context for Claude
+                queue.enqueue(absolutePath, priority, result.stderr || result.stdout);
               });
               
               console.log(chalk.green('✓'), `Added ${result.failingTests.length} test(s) to queue`);
@@ -684,7 +686,9 @@ program
           }
           
           result.failingTests.forEach(test => {
-            queue.enqueue(test, 0, result.failureDetails?.[test]?.error);
+            const absolutePath = path.resolve(test);
+            // Pass test output as error context for Claude
+            queue.enqueue(absolutePath, 0, result.failureDetails?.[test]?.error || result.stderr || result.stdout);
           });
         } else if (!result.success) {
           if (useJsonOutput(options)) {

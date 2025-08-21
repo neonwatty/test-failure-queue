@@ -21,6 +21,7 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:providers": "vitest run tests/providers",
+    "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
