@@ -64,7 +64,7 @@ describe('ConfigManager', () => {
     });
 
     it('should validate defaultLanguage and warn on invalid language', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const config = {
         defaultLanguage: 'invalid' as any
       };
@@ -80,7 +80,7 @@ describe('ConfigManager', () => {
     });
 
     it('should validate defaultFrameworks and warn on invalid framework', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const config = {
         defaultFrameworks: {
           javascript: 'invalid-framework'
