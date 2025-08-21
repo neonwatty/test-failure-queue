@@ -1,9 +1,23 @@
 # TFQ (Test Failure Queue)
 
-[![npm version](https://badge.fury.io/js/tfq.svg)](https://badge.fury.io/js/tfq)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.  Easily integates with agentic tools like Claude Code for context-managed test fixing.
 
-A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.
+## Table of Contents
+- [Overview](#overview)
+- [Essential Commands](#essential-commands)
+- [How It Works](#how-it-works)
+- [Features](#features)
+- [Installation](#installation)
+- [Supported Languages](#supported-languages)
+- [Usage](#usage)
+  - [CLI Commands](#cli-commands)
+  - [Test Grouping](#test-grouping)
+  - [Programmatic API](#programmatic-api)
+- [Claude Code Integration](#claude-code-integration)
+- [Configuration](#configuration)
+- [Use Cases](#use-cases)
+- [Development](#development)
+- [Contributing](#contributing)
 
 ## Overview
 
@@ -46,7 +60,7 @@ Tests:       8 failed, 15 passed, 23 total
 - src/components/Button.test.js
 ```
 
-#### Step 2: Add Failures to Queue
+#### Step 2: Run tests, Discover Failures, Add Failures to Queue
 ```bash
 $ tfq run-tests --auto-detect --auto-add --priority 5
 Running tests and adding failures to queue...
@@ -107,6 +121,7 @@ src/api/auth.test.js [P5]
 - **Cross-Project Support**: Manage test queues for multiple projects
 - **Intelligent Test Grouping**: Organize tests for parallel or sequential execution
 - **Execution Optimization**: Run independent tests in parallel for 40-60% faster execution
+- **Claude Code Integration**: Works seamlessly with Claude Code for AI-powered test fixing (see CLAUDE.md)
 
 ## Installation
 
@@ -138,12 +153,6 @@ npm install -g tfq
 - **Auto-detection**: via Gemfile or directory structure
 - **Default command**: `rails test`
 
-## Documentation
-
-- [User Guide](./docs/USER_GUIDE.md) - Comprehensive user documentation
-- [API Documentation](./docs/API_DOCUMENTATION.md) - Technical API reference for developers
-- [Changelog](./docs/CHANGELOG.md) - Version history and changes
-- [Release Notes](./docs/RELEASE_NOTES.md) - Latest release information
 
 ## Usage
 
@@ -208,7 +217,7 @@ tfq stats
 tfq stats --json
 ```
 
-### Test Grouping (NEW)
+### Test Grouping
 
 TFQ now supports intelligent test grouping for optimized execution, enabling parallel processing of independent tests and sequential execution of dependent tests.
 
@@ -278,13 +287,6 @@ tfq next --group  # Returns 1 test
 # Group 3: 2 UI tests (parallel execution possible)
 tfq next --group  # Returns both tests
 ```
-
-#### Benefits of Grouping
-- **Performance**: Execute independent tests in parallel (40-60% faster)
-- **Safety**: Prevent conflicts by running dependent tests sequentially
-- **Flexibility**: Mix parallel and sequential execution strategies
-- **Intelligence**: Group by dependencies, not just file location
-
 
 ### Programmatic API
 
@@ -360,6 +362,16 @@ const runner = new TestRunner();
 const config = new ConfigManager();
 ```
 
+## Claude Code Integration
+
+TFQ integrates seamlessly with Claude Code for AI-powered test fixing. Custom slash commands are provided in the `commands/` directory:
+
+- **`/tfq-run`** - Discovers and queues failing tests
+- **`/tfq-fix-next`** - Fixes the next test in queue using a Task agent
+- **`/tfq-fix-all`** - Complete workflow that runs tests and iteratively fixes all failures
+- **`/tfq-reset`** - Clears the queue for a fresh start
+
+These commands leverage Claude Code's Task agents and tools (Bash, Read, Edit) to automatically understand and fix test failures. See `CLAUDE.md` for detailed integration documentation and `plans/slash-commands/` for implementation details.
 
 ## Configuration
 

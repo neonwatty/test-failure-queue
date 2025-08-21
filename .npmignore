@@ -2,6 +2,7 @@
 src/
 tests/
 plans/
+commands/
 
 # Configuration files
 tsconfig.json

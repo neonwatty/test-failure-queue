@@ -15,22 +15,31 @@ class TestFailureQueue {
   constructor(options?: TestQueueOptions)
   
   // Queue operations
-  enqueue(filePath: string, priority?: number): void
+  enqueue(filePath: string, priority?: number, error?: string): void
   dequeue(): string | null
   peek(): string | null
   remove(filePath: string): boolean
-  resolve(filePath: string): boolean
   clear(): void
   
   // Query operations
-  list(limit?: number): QueueItem[]
+  list(): QueueItem[]
   size(): number
   contains(filePath: string): boolean
   search(pattern: string): QueueItem[]
   searchGlob(pattern: string): QueueItem[]
   
+  // Grouping operations
+  setExecutionGroups(groups: string[][]): void
+  setExecutionGroupsAdvanced(plan: GroupingPlan): void
+  dequeueGroup(): string[] | null
+  peekGroup(): QueueItem[] | null
+  getGroupingPlan(): GroupingPlan | null
+  hasGroups(): boolean
+  clearGroups(): void
+  getGroupStats(): { totalGroups: number; parallelGroups: number; sequentialGroups: number }
+  
   // Statistics
-  getStats(): QueueStats
+  getStats(): QueueStatistics
   
   // Lifecycle
   close(): void
