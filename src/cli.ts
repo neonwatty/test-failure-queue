@@ -11,11 +11,6 @@ import { TestFixer, TestFixerConfig } from './providers/claude/test-fixer.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import dotenv from 'dotenv';
-import dotenvExpand from 'dotenv-expand';
-
-const myEnv = dotenv.config({ silent: true } as any);
-dotenvExpand.expand(myEnv);
 
 const program = new Command();
 let config: ConfigFile = {};

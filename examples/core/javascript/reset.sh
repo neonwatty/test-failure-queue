@@ -1,3 +1,9 @@
+#!/bin/bash
+
+echo "🔄 Resetting JavaScript Calculator to buggy state..."
+
+# Reset calculator.js to buggy version
+cat > src/calculator.js << 'EOF'
 class Calculator {
   add(a, b) {
     return a + b;
@@ -52,3 +58,20 @@ class Calculator {
 }
 
 module.exports = Calculator;
+EOF
+
+echo "✅ src/calculator.js reset to buggy version"
+
+# Clear TFQ queue for this demo
+echo "🧹 Clearing TFQ queue..."
+../../../bin/tfq clear 2>/dev/null || true
+
+echo "✅ Reset complete!"
+echo ""
+echo "The following bugs have been introduced:"
+echo "  1. multiply() returns fixed value 17 instead of a * b"
+echo "  2. average() doesn't validate empty arrays (returns NaN)"
+echo ""
+echo "You can now run the demo:"
+echo "  ./demo.sh           # Run the full demo"
+echo "  npm test            # See failing tests"
