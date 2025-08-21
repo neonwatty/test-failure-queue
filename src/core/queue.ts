@@ -1,7 +1,8 @@
 import { TestDatabase } from './database.js';
-import { QueueItem, QueueOptions, QueueStatistics } from './types.js';
+import { QueueItem, QueueOptions, QueueStatistics, ExecutionGroup, GroupingPlan } from './types.js';
 import { minimatch } from 'minimatch';
 import { loadConfig } from './config.js';
+import path from 'path';
 
 export class TestFailureQueue {
   private db: TestDatabase;
@@ -87,5 +88,95 @@ export class TestFailureQueue {
 
   close(): void {
     this.db.close();
+  }
+
+  // Grouping methods
+  setExecutionGroups(groups: string[][]): void {
+    groups.forEach((group, index) => {
+      const groupId = index + 1;
+      const groupType = group.length > 1 ? 'parallel' : 'sequential';
+      
+      group.forEach((testFile, orderIndex) => {
+        this.db.setTestGroup(testFile, groupId, groupType, orderIndex);
+      });
+    });
+  }
+
+  setExecutionGroupsAdvanced(plan: GroupingPlan): void {
+    for (const group of plan.groups) {
+      group.tests.forEach((testFile, orderIndex) => {
+        this.db.setTestGroup(testFile, group.groupId, group.type, orderIndex);
+      });
+    }
+  }
+
+  dequeueGroup(): string[] | null {
+    const filePaths = this.db.dequeueGroup();
+    return filePaths.length > 0 ? filePaths : null;
+  }
+
+  peekGroup(): QueueItem[] | null {
+    const group = this.db.getNextGroup();
+    return group ? group.tests : null;
+  }
+
+  getGroupingPlan(): GroupingPlan | null {
+    const allItems = this.db.list();
+    const groupedItems = allItems.filter(item => item.groupId !== undefined);
+    
+    if (groupedItems.length === 0) {
+      return null;
+    }
+
+    const groupsMap = new Map<number, { group: ExecutionGroup, items: any[] }>();
+    
+    for (const item of groupedItems) {
+      if (!item.groupId || !item.groupType) continue;
+      
+      if (!groupsMap.has(item.groupId)) {
+        groupsMap.set(item.groupId, {
+          group: {
+            groupId: item.groupId,
+            type: item.groupType,
+            tests: [],
+            order: item.groupOrder
+          },
+          items: []
+        });
+      }
+      
+      groupsMap.get(item.groupId)!.items.push(item);
+    }
+
+    // Sort items within each group by groupOrder and build test arrays
+    const groups: ExecutionGroup[] = [];
+    groupsMap.forEach(({ group, items }) => {
+      items.sort((a, b) => (a.groupOrder || 0) - (b.groupOrder || 0));
+      group.tests = items.map(item => item.filePath);
+      groups.push(group);
+    });
+
+    return {
+      groups: groups.sort((a, b) => {
+        // Sort by order if present, otherwise by groupId
+        if (a.order !== undefined && b.order !== undefined) {
+          return a.order - b.order;
+        }
+        return a.groupId - b.groupId;
+      })
+    };
+  }
+
+  hasGroups(): boolean {
+    const stats = this.db.getGroupStats();
+    return stats.totalGroups > 0;
+  }
+
+  clearGroups(): void {
+    this.db.clearGroups();
+  }
+
+  getGroupStats(): { totalGroups: number; parallelGroups: number; sequentialGroups: number } {
+    return this.db.getGroupStats();
   }
 }

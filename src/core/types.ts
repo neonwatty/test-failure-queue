@@ -6,6 +6,9 @@ export interface QueueItem {
   failureCount: number;
   lastFailure: Date;
   error?: string;
+  groupId?: number;
+  groupType?: 'parallel' | 'sequential';
+  groupOrder?: number;
 }
 
 export interface QueueStatistics {
@@ -81,4 +84,20 @@ export interface AdapterRegistry {
   list(): AdapterInfo[];
   detectLanguage(projectPath?: string): TestLanguage | null;
   getFrameworksForLanguage(language: TestLanguage): string[];
+}
+
+export interface ExecutionGroup {
+  groupId: number;
+  type: 'parallel' | 'sequential';
+  tests: string[];
+  order?: number;
+}
+
+export interface GroupingPlan {
+  groups: ExecutionGroup[];
+  metadata?: {
+    strategy?: string;
+    estimatedTime?: number;
+    dependencies?: Record<string, string[]>;
+  };
 }

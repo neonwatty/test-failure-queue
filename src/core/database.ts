@@ -9,7 +9,8 @@ export class TestDatabase {
   private readonly defaultPath = path.join(os.homedir(), '.tfq', 'queue.db');
 
   constructor(config: DatabaseConfig = {}) {
-    const dbPath = config.path || this.defaultPath;
+    // Check environment variable first, then config, then default
+    const dbPath = process.env.TFQ_DB_PATH || config.path || this.defaultPath;
     const dbDir = path.dirname(dbPath);
 
     if (!fs.existsSync(dbDir)) {
@@ -32,18 +33,44 @@ export class TestDatabase {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         failure_count INTEGER DEFAULT 1,
         last_failure DATETIME DEFAULT CURRENT_TIMESTAMP,
-        error TEXT
+        error TEXT,
+        group_id INTEGER DEFAULT NULL,
+        group_type TEXT DEFAULT NULL,
+        group_order INTEGER DEFAULT 0
       );
 
       CREATE INDEX IF NOT EXISTS idx_priority_created 
       ON failed_tests(priority DESC, created_at ASC);
+      
+      CREATE INDEX IF NOT EXISTS idx_group_id_order 
+      ON failed_tests(group_id, group_order);
     `);
     
-    // Add error column if it doesn't exist (for existing databases)
+    // Add columns if they don't exist (for existing databases)
     const tableInfo = this.db.prepare("PRAGMA table_info(failed_tests)").all();
     const hasErrorColumn = tableInfo.some((col: any) => col.name === 'error');
+    const hasGroupId = tableInfo.some((col: any) => col.name === 'group_id');
+    const hasGroupType = tableInfo.some((col: any) => col.name === 'group_type');
+    const hasGroupOrder = tableInfo.some((col: any) => col.name === 'group_order');
+    
     if (!hasErrorColumn) {
       this.db.exec('ALTER TABLE failed_tests ADD COLUMN error TEXT');
+    }
+    if (!hasGroupId) {
+      this.db.exec('ALTER TABLE failed_tests ADD COLUMN group_id INTEGER DEFAULT NULL');
+    }
+    if (!hasGroupType) {
+      this.db.exec('ALTER TABLE failed_tests ADD COLUMN group_type TEXT DEFAULT NULL');
+    }
+    if (!hasGroupOrder) {
+      this.db.exec('ALTER TABLE failed_tests ADD COLUMN group_order INTEGER DEFAULT 0');
+    }
+    
+    // Create group index if it doesn't exist
+    const indexInfo = this.db.prepare("PRAGMA index_list(failed_tests)").all();
+    const hasGroupIndex = indexInfo.some((idx: any) => idx.name === 'idx_group_id_order');
+    if (!hasGroupIndex) {
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_group_id_order ON failed_tests(group_id, group_order)');
     }
   }
 
@@ -98,7 +125,10 @@ export class TestDatabase {
         created_at as createdAt,
         failure_count as failureCount,
         last_failure as lastFailure,
-        error
+        error,
+        group_id as groupId,
+        group_type as groupType,
+        group_order as groupOrder
       FROM failed_tests 
       ORDER BY priority DESC, created_at ASC
     `).all() as any[];
@@ -107,7 +137,10 @@ export class TestDatabase {
       ...row,
       createdAt: new Date(row.createdAt),
       lastFailure: new Date(row.lastFailure),
-      error: row.error || undefined
+      error: row.error || undefined,
+      groupId: row.groupId || undefined,
+      groupType: row.groupType || undefined,
+      groupOrder: row.groupOrder || undefined
     }));
   }
 
@@ -215,5 +248,121 @@ export class TestDatabase {
 
   close(): void {
     this.db.close();
+  }
+
+  // Grouping methods
+  setTestGroup(filePath: string, groupId: number, groupType: 'parallel' | 'sequential', order: number = 0): void {
+    const stmt = this.db.prepare(`
+      UPDATE failed_tests 
+      SET group_id = ?, group_type = ?, group_order = ?
+      WHERE file_path = ?
+    `);
+    stmt.run(groupId, groupType, order, filePath);
+  }
+
+  getTestsByGroup(groupId: number): QueueItem[] {
+    const rows = this.db.prepare(`
+      SELECT 
+        id,
+        file_path as filePath,
+        priority,
+        created_at as createdAt,
+        failure_count as failureCount,
+        last_failure as lastFailure,
+        error,
+        group_id as groupId,
+        group_type as groupType,
+        group_order as groupOrder
+      FROM failed_tests 
+      WHERE group_id = ?
+      ORDER BY group_order ASC, created_at ASC
+    `).all(groupId) as any[];
+
+    return rows.map(row => ({
+      ...row,
+      createdAt: new Date(row.createdAt),
+      lastFailure: new Date(row.lastFailure),
+      error: row.error || undefined,
+      groupId: row.groupId || undefined,
+      groupType: row.groupType || undefined,
+      groupOrder: row.groupOrder || undefined
+    }));
+  }
+
+  getNextGroup(): { groupId: number; type: string; tests: QueueItem[] } | null {
+    // Find the lowest group_id that still has tests
+    const groupRow = this.db.prepare(`
+      SELECT MIN(group_id) as groupId, group_type as type
+      FROM failed_tests 
+      WHERE group_id IS NOT NULL
+      GROUP BY group_id
+      ORDER BY group_id ASC
+      LIMIT 1
+    `).get() as { groupId: number; type: string } | undefined;
+
+    if (!groupRow) {
+      return null;
+    }
+
+    const tests = this.getTestsByGroup(groupRow.groupId);
+    
+    return {
+      groupId: groupRow.groupId,
+      type: groupRow.type,
+      tests
+    };
+  }
+
+  clearGroups(): void {
+    this.db.prepare(`
+      UPDATE failed_tests 
+      SET group_id = NULL, group_type = NULL, group_order = 0
+    `).run();
+  }
+
+  getGroupStats(): { totalGroups: number; parallelGroups: number; sequentialGroups: number } {
+    const stats = {
+      totalGroups: 0,
+      parallelGroups: 0,
+      sequentialGroups: 0
+    };
+
+    const rows = this.db.prepare(`
+      SELECT group_type, COUNT(DISTINCT group_id) as count
+      FROM failed_tests
+      WHERE group_id IS NOT NULL
+      GROUP BY group_type
+    `).all() as { group_type: string; count: number }[];
+
+    for (const row of rows) {
+      if (row.group_type === 'parallel') {
+        stats.parallelGroups = row.count;
+      } else if (row.group_type === 'sequential') {
+        stats.sequentialGroups = row.count;
+      }
+    }
+
+    stats.totalGroups = stats.parallelGroups + stats.sequentialGroups;
+    
+    return stats;
+  }
+
+  dequeueGroup(): string[] {
+    const transaction = this.db.transaction(() => {
+      const group = this.getNextGroup();
+      if (!group) {
+        return [];
+      }
+
+      const filePaths = group.tests.map(t => t.filePath);
+      
+      // Remove all tests in this group
+      const stmt = this.db.prepare('DELETE FROM failed_tests WHERE group_id = ?');
+      stmt.run(group.groupId);
+      
+      return filePaths;
+    });
+
+    return transaction();
   }
 }

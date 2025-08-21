@@ -8,5 +8,7 @@ export {
   ConfigFile
 } from './core/types.js';
 export { ConfigManager, loadConfig } from './core/config.js';
-export { TestFixer, TestFixerConfig } from './providers/claude/test-fixer.js';
-export { ClaudeCodeClient } from './providers/claude/claude-code-client.js';
+// Claude provider exports would go here when implemented
+// export { TestFixer } from './providers/claude/test-fixer.js';
+// export { ClaudeCodeClient } from './providers/claude/claude-code-client.js';
+// export type { TestFixerConfig } from './providers/claude/types.js';

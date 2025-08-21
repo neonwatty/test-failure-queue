@@ -1,89 +1,106 @@
-# TFQ Examples
+# Core Integration Test Projects
 
-This directory contains example projects and demonstrations for TFQ (Test Failure Queue).
+This directory contains test projects used by TFQ's integration test suite to verify core functionality across different languages and frameworks.
 
-## Directory Structure
+## Purpose
 
-### `/core/`
-**Core Integration Test Projects** - Full-featured test projects used by TFQ's integration test suite to verify core functionality across different languages and frameworks.
+These projects are **NOT** meant for demonstrating Claude Code AI features. Instead, they:
+- Test TFQ's core queue management functionality
+- Verify multi-language support
+- Ensure proper test detection and parsing
+- Validate framework auto-detection
 
-- `javascript/` - JavaScript project with Jest tests
+## Projects
 
-These projects contain intentionally failing tests to verify TFQ's ability to:
-- Detect test failures
-- Parse error output
-- Manage the failure queue
-- Work with different test frameworks
+### JavaScript (`javascript/`)
+- **Framework**: Jest
+- **Tests**: Calculator functions with intentional failures
+- **Purpose**: Verify JavaScript/Jest integration
 
-### `/providers/`
-**Provider Demonstrations** - Simple projects demonstrating TFQ's AI-powered test fixing capabilities using various providers like Claude Code SDK.
+### Python (`python/`)
+- **Framework**: pytest
+- **Tests**: Calculator and advanced math functions
+- **Purpose**: Verify Python/pytest integration
 
-- `math-assistant.ts` - Basic example showing Claude Code SDK usage
-- `javascript-calculator/` - JavaScript project with failing calculator tests
-- `python-math-utils/` - Python project with failing math utility tests
+### Ruby (`ruby/`)
+- **Framework**: Minitest
+- **Tests**: Calculator with edge cases
+- **Purpose**: Verify Ruby/Minitest integration
 
-These demos are designed to:
-- Show how TFQ can automatically fix failing tests
-- Demonstrate the Claude Code SDK integration
-- Provide simple, understandable test scenarios
+### Rails 8 (`rails8/`)
+- **Framework**: Minitest (Rails)
+- **Tests**: User model and controller tests
+- **Purpose**: Verify Rails application support
 
-### `/configs/`
-**Configuration Examples** - Sample `.tfqrc` configuration files for different languages and setups.
+### TypeScript (`typescript/`)
+- **Framework**: Vitest
+- **Tests**: TypeScript calculator with type checking
+- **Purpose**: Verify TypeScript/Vitest integration
 
-- `javascript.tfqrc` - JavaScript/Node.js configuration
-- `python.tfqrc` - Python configuration
-- `ruby.tfqrc` - Ruby configuration
-- `multi-language.tfqrc` - Multi-language project configuration
+## Usage in Tests
 
-## Usage
-
-### Running Integration Tests
-
-The projects in `/core/` are automatically used by TFQ's test suite:
+These projects are automatically used by the integration test suite:
 
 ```bash
+# Run all integration tests
 npm run test:integration
+
+# Run specific test file
+npm test tests/integration/examples-integration.test.ts
 ```
 
-### Testing Providers
+## Test Scenarios
 
-To test the AI-powered test fixing with projects in `/providers/`:
+Each project includes:
+1. **Passing tests** - To verify successful test detection
+2. **Failing tests** - To verify failure detection and queue management
+3. **Multiple test files** - To test batch processing
+4. **Various error types** - To test error parsing
 
-1. Ensure Claude Code is installed and authenticated
-2. Navigate to a demo project:
-   ```bash
-   cd examples/providers/javascript-calculator
-   ```
-3. Run tests to see failures:
-   ```bash
-   npm test
-   ```
-4. Use TFQ to fix the tests:
-   ```bash
-   tfq run-tests --auto-add
-   tfq fix-tests
-   ```
+## Important Notes
 
-### Using Configuration Examples
+⚠️ **Do NOT modify these projects** unless updating integration tests
+- The tests expect specific failures and outputs
+- Changes may break the integration test suite
+- Each project is carefully crafted for testing specific scenarios
 
-Copy a configuration file to your project root and customize:
+## Adding New Test Projects
+
+If adding a new language/framework:
+
+1. Create a minimal project with clear test structure
+2. Include both passing and failing tests
+3. Document the expected failures
+4. Add corresponding integration tests in `tests/integration/`
+5. Update the auto-detection logic if needed
+
+Example structure:
+```
+new-language/
+├── README.md           # Document the test scenarios
+├── package.json        # Or equivalent dependency file
+├── src/               # Implementation files
+│   └── calculator.ext
+└── tests/             # Test files with failures
+    └── calculator.test.ext
+```
+
+## Running Projects Individually
+
+To manually test a project:
 
 ```bash
-cp examples/configs/javascript.tfqrc .tfqrc
+cd examples/core/javascript
+npm install
+npm test
+
+# Use TFQ to detect failures
+tfq run-tests --auto-detect
+tfq list
 ```
 
-## Creating Your Own Examples
+## Related
 
-### For Core Integration Testing
-Add projects to `/core/` that:
-- Have clear test failures
-- Use standard test frameworks
-- Include both passing and failing tests
-- Are minimal but realistic
-
-### For Provider Demos
-Add projects to `/providers/` that:
-- Have simple, fixable test failures
-- Demonstrate specific fixing scenarios
-- Are easy to understand
-- Show the power of AI-assisted fixing
+- [Integration Tests](../../tests/integration/)
+- [Provider Demos](../providers/) - For AI feature demonstrations
+- [Configuration Examples](../configs/) - Sample configuration files

@@ -3,13 +3,21 @@
 [![npm version](https://badge.fury.io/js/tfq.svg)](https://badge.fury.io/js/tfq)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A multi-language test failure management tool with persistent SQLite storage and AI-powered test fixing, supporting JavaScript, Python, and Ruby test frameworks.
+A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.
 
 ## Overview
 
-TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across multiple programming languages and test frameworks.  It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs. 
+TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across multiple programming languages and test frameworks.  It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
 
-tfq integrates with Claude Code SDK to automatically analyze and fix failing tests in independent, self-contained sessions.
+## Essential Commands
+
+| Command | What it does |
+|---------|--------------|
+| `tfq run-tests --auto-add` | Run tests and queue failures |
+| `tfq list` | View queued test failures |
+| `tfq stats` | Show queue statistics |
+| `tfq clear` | Clear the queue |
+| `tfq --help` | Show all commands |
 
 ## How It Works
 
@@ -54,113 +62,33 @@ Queue contains 3 file(s):
 3. src/components/Button.test.js [P5] (1 failure)
 ```
 
-#### Step 4: Fix Tests One by One
+#### Step 4: Work Through Test Failures
+
+After adding failures to the queue, you can work through them systematically:
+
 ```bash
-$ tfq fix-tests --verbose
-```
+# View the next test to work on
+$ tfq next
+src/utils/calculator.test.js [P5]
 
-The command will:
-1. **Dequeue first test**: Gets `src/utils/calculator.test.js` from queue
-2. **Analyze context**: Finds `src/utils/calculator.js` as related file
-3. **Generate fix prompt**: Sends test code, error output, and source code to Claude
-4. **Apply fix**: Claude suggests changing `a - b` to `a + b`
-5. **Verify**: Runs the test again to check if it passes
-6. **Update queue**: Removes from queue if fixed, re-queues with higher priority if still failing
-7. **Repeat**: Moves to next test until queue is empty
+# Work on fixing the test manually
+# Then mark it as resolved when fixed
+$ tfq resolve src/utils/calculator.test.js
+✓ Resolved: src/utils/calculator.test.js
 
-**Output looks like:**
-```
-Processing test 1/3: src/utils/calculator.test.js
-  Reading test file...
-  Found related files: src/utils/calculator.js
-  Generating fix with Claude Code SDK...
-  Applying suggested fix...
-  Running test to verify...
-  ✓ Test now passing!
-
-Processing test 2/3: src/api/auth.test.js
-  Reading test file...
-  Found related files: src/api/auth.js, src/middleware/auth.js
-  Generating fix with Claude Code SDK...
-  Applying suggested fix...
-  Running test to verify...
-  ✓ Test now passing!
-
-Processing test 3/3: src/components/Button.test.js
-  Reading test file...
-  Found related files: src/components/Button.jsx
-  Generating fix with Claude Code SDK...
-  Attempt 1 failed, retrying...
-  Attempt 2 failed, retrying...
-  Attempt 3 failed
-  ✗ Could not fix after 3 attempts
-  Re-queued with priority 10
-
-Summary:
-- Fixed: 2 tests
-- Failed: 1 test
-- Remaining in queue: 1
+# Continue with the next test
+$ tfq next
+src/api/auth.test.js [P5]
 ```
 
 ### Key Points
 
-1. **One at a Time**: `tfq fix-tests` processes tests sequentially, not in parallel
-2. **Smart Context**: It finds related source files to provide context to Claude
-3. **Retry Logic**: Failed fixes are retried with configurable limits
-4. **Priority Queue**: Failed fixes get re-queued with higher priority
-5. **Language Agnostic**: Works with JavaScript, Python, Ruby, and their test frameworks
+1. **Priority Queue**: Higher priority tests are dequeued first
+2. **Persistent Storage**: Queue persists across sessions
+3. **Language Agnostic**: Works with JavaScript, Python, Ruby, and their test frameworks
+4. **Pattern Matching**: Support for glob patterns to manage multiple files
+5. **Cross-Project**: Can manage test queues for multiple projects
 
-### Customizable Prompts
-
-While `tfq fix-tests` includes an optimized default prompt for test fixing, you can customize it:
-
-```bash
-# Use default prompt (optimized for test fixing)
-tfq fix-tests
-
-# Provide your own custom system prompt
-tfq fix-tests --system-prompt "Focus on fixing syntax errors first, then logic errors"
-
-# Specialized prompts for different scenarios
-tfq fix-tests --system-prompt "Fix React component tests, ensure proper mocking"
-tfq fix-tests --system-prompt "Fix Python tests, follow PEP 8 style guidelines"
-```
-
-### Claude Code Custom Slash Commands
-
-TFQ is designed to work seamlessly with Claude Code's custom slash commands. A single slash command can handle the complete workflow - testing, recording failures, and fixing them all in one go.
-
-**Setting up a complete workflow slash command:**
-
-1. In Claude Code, create a new slash command (e.g., `/fix-all-tests`)
-2. Configure it to run: `tfq run-tests --auto-detect --auto-add && tfq fix-tests --verbose`
-3. Now when you type `/fix-all-tests` in Claude Code, it will:
-   - Run all tests in your project
-   - Auto-detect the language and framework
-   - Record all failures to the queue
-   - Fix each failing test one by one
-   - Show you the complete progress and results
-
-**Example slash command configurations:**
-
-```bash
-# Complete workflow: test, record, and fix
-/fix-all-tests → tfq run-tests --auto-detect --auto-add && tfq fix-tests --verbose
-
-# Test and fix with custom priority
-/fix-critical → tfq run-tests --auto-detect --auto-add --priority 10 && tfq fix-tests
-
-# Preview what would be fixed without making changes
-/preview-fixes → tfq run-tests --auto-detect --auto-add && tfq fix-tests --dry-run
-
-# Quick fix with minimal retries
-/quick-fix → tfq run-tests --auto-detect --auto-add && tfq fix-tests --max-retries 1
-
-# Fix only existing queue (skip testing)
-/fix-queue → tfq fix-tests --verbose
-```
-
-This integration allows you to trigger the complete test-and-fix workflow with a single command, making TFQ a natural extension of your Claude Code development environment.
 
 ## Features
 
@@ -177,6 +105,8 @@ This integration allows you to trigger the complete test-and-fix workflow with a
 - **Failure Tracking**: Automatically tracks failure counts and timestamps
 - **Multiple Output Formats**: JSON output for programmatic usage
 - **Cross-Project Support**: Manage test queues for multiple projects
+- **Intelligent Test Grouping**: Organize tests for parallel or sequential execution
+- **Execution Optimization**: Run independent tests in parallel for 40-60% faster execution
 
 ## Installation
 
@@ -190,24 +120,6 @@ Or install globally:
 npm install -g tfq
 ```
 
-### Claude Code SDK Setup
-
-The test fixing feature uses the Claude Code SDK. To use it:
-
-1. **Install Claude Code** from [claude.ai/code](https://claude.ai/code)
-2. **Authenticate Claude Code** on your system (follow the setup instructions)
-3. **Use tfq normally** - The SDK will automatically use your Claude Code authentication
-
-```bash
-# Once Claude Code is installed and authenticated on your system:
-npm install -g tfq
-tfq fix-tests  # Will use your Claude Code authentication automatically
-```
-
-**Note**: 
-- The Claude Code SDK (`@anthropic-ai/claude-code`) and `tsx` are included as dependencies when you install `tfq`
-- You can run `tfq` from any terminal - it will use your system's Claude Code installation
-- No API keys are needed - authentication is handled by Claude Code 
 
 ## Supported Languages
 
@@ -296,32 +208,83 @@ tfq stats
 tfq stats --json
 ```
 
-#### Test Fixing using Claude Code SDK
+### Test Grouping (NEW)
+
+TFQ now supports intelligent test grouping for optimized execution, enabling parallel processing of independent tests and sequential execution of dependent tests.
+
+#### Set execution groups
 ```bash
-# Fix all tests in queue 
-tfq fix-tests
+# Simple array format - auto-determines parallel vs sequential
+tfq set-groups --json '[["test1.js", "test2.js"], ["test3.js"]]'
 
-# Run tests first to populate queue, then fix them
-tfq fix-tests --auto-run
+# From a file
+tfq set-groups --file grouping-plan.json
 
-# Dry run mode (preview fixes without applying them)
-tfq fix-tests --dry-run
-
-# Configure fixing behavior
-tfq fix-tests --max-retries 5 --max-iterations 15
-
-# Specify language and framework
-tfq fix-tests --language javascript --framework jest
-
-# Custom system prompt
-tfq fix-tests --system-prompt "Focus on fixing syntax errors first"
-
-# Verbose output with detailed logging
-tfq fix-tests --verbose
-
-# JSON output for programmatic usage
-tfq fix-tests --json
+# Advanced format with explicit types
+tfq set-groups --json '{
+  "groups": [
+    {"groupId": 1, "type": "parallel", "tests": ["auth.test.js", "api.test.js"]},
+    {"groupId": 2, "type": "sequential", "tests": ["database.test.js"]}
+  ]
+}'
 ```
+
+#### View current groups
+```bash
+tfq get-groups        # Human-readable format
+tfq get-groups --json # JSON format
+```
+
+#### Execute groups
+```bash
+# Dequeue next group of tests
+tfq next --group      # Returns all tests in the group
+tfq next --group --json
+
+# Preview next group without removing
+tfq peek --group
+tfq peek --group --json
+```
+
+#### Manage groups
+```bash
+# View grouping statistics
+tfq group-stats
+tfq group-stats --json
+
+# Clear all grouping data
+tfq clear-groups --confirm
+```
+
+#### Example: Optimized Test Execution
+```bash
+# 1. Run tests and add failures to queue
+tfq run-tests --auto-detect --auto-add
+
+# 2. Set up intelligent grouping
+tfq set-groups --json '[
+  ["unit/auth.test.js", "unit/api.test.js", "unit/utils.test.js"],
+  ["integration/database.test.js"],
+  ["ui/button.test.js", "ui/form.test.js"]
+]'
+
+# 3. Execute groups optimally
+# Group 1: 3 unit tests (parallel execution possible)
+tfq next --group  # Returns all 3 tests
+
+# Group 2: 1 database test (sequential, isolated)
+tfq next --group  # Returns 1 test
+
+# Group 3: 2 UI tests (parallel execution possible)
+tfq next --group  # Returns both tests
+```
+
+#### Benefits of Grouping
+- **Performance**: Execute independent tests in parallel (40-60% faster)
+- **Safety**: Prevent conflicts by running dependent tests sequentially
+- **Flexibility**: Mix parallel and sequential execution strategies
+- **Intelligence**: Group by dependencies, not just file location
+
 
 ### Programmatic API
 
@@ -348,6 +311,37 @@ queue.resolve('/path/to/test.spec.ts');
 // Get statistics
 const stats = queue.getStats();
 console.log(`Total failures: ${stats.totalItems}`);
+
+// Test Grouping
+// Set execution groups (array format)
+queue.setExecutionGroups([
+  ['test1.js', 'test2.js', 'test3.js'],  // Parallel group
+  ['test4.js'],                           // Sequential group
+  ['test5.js', 'test6.js']                // Parallel group
+]);
+
+// Or use advanced format
+queue.setExecutionGroupsAdvanced({
+  groups: [
+    { groupId: 1, type: 'parallel', tests: ['test1.js', 'test2.js'] },
+    { groupId: 2, type: 'sequential', tests: ['test3.js'] }
+  ]
+});
+
+// Dequeue entire group
+const group = queue.dequeueGroup();  // Returns ['test1.js', 'test2.js', 'test3.js']
+
+// Preview next group
+const nextGroup = queue.peekGroup();
+
+// Get grouping plan
+const plan = queue.getGroupingPlan();
+
+// Check if groups exist
+if (queue.hasGroups()) {
+  const groupStats = queue.getGroupStats();
+  console.log(`Parallel groups: ${groupStats.parallelGroups}`);
+}
 ```
 
 ### Core API Usage
@@ -366,23 +360,6 @@ const runner = new TestRunner();
 const config = new ConfigManager();
 ```
 
-### Claude AI Provider
-
-The AI-powered test fixing features are provided through the Claude Code SDK provider:
-
-```typescript
-import { TestFixer } from 'tfq/providers/claude/test-fixer';
-import { ClaudeCodeClient } from 'tfq/providers/claude/claude-code-client';
-
-// Initialize the test fixer (no API key needed when using Claude Code SDK)
-const fixer = new TestFixer({
-  maxRetries: 3,
-  useClaudeCodeSDK: true
-});
-
-// Fix failing tests
-await fixer.fixAllTests();
-```
 
 ## Configuration
 
@@ -431,40 +408,6 @@ tfq add src/payments/*.test.ts --priority 9
 tfq next  # Returns highest priority test
 ```
 
-### Claude Code SDK Development Workflow
-
-```bash
-# Complete automated fix workflow
-export ANTHROPIC_API_KEY="your-api-key"
-
-# 1. Run tests and automatically populate queue with failures
-tfq run-tests --auto-detect --auto-add
-
-# 2. Use AI to fix all queued failures
-tfq fix-tests --auto-run --verbose
-
-# 3. Check fix results
-tfq stats
-
-# Alternative: Step-by-step workflow
-tfq run-tests --auto-detect --auto-add
-tfq fix-tests --dry-run  # Preview fixes first
-tfq fix-tests           # Apply fixes
-npm test                # Verify fixes worked
-```
-
-### Cost Management for AI Features
-
-```bash
-# Check estimated costs before running
-tfq fix-tests --dry-run --json | jq '.estimatedCost'
-
-# Monitor usage during fixing
-tfq fix-tests --verbose  # Shows token usage and costs
-
-# Use custom prompts to reduce token usage
-tfq fix-tests --system-prompt "Provide minimal fixes only"
-```
 
 ## Development
 
@@ -483,17 +426,11 @@ npm test
 # Run specific test suites
 npm run test:unit        # Unit tests only
 npm run test:integration # Integration tests only
-npm run test:providers   # Provider tests (requires Claude Code)
-
-# Run all tests including provider tests
-npm run test:all
 
 # Other test options
 npm run test:watch      # Watch mode
 npm run test:coverage   # With coverage report
 ```
-
-**Note**: Provider tests are separated from the default test suite because they may require Claude Code to be installed and authenticated. The main `npm test` command runs only unit and integration tests to ensure CI/CD pipelines work without additional setup.
 
 ### Project Structure
 
@@ -508,11 +445,6 @@ tfq/
 │   │   ├── types.ts          # TypeScript types
 │   │   ├── test-runner.ts    # Multi-language test execution
 │   │   └── config.ts         # Configuration management
-│   ├── providers/            # AI service providers
-│   │   └── claude/           # Claude Code SDK provider
-│   │       ├── test-fixer.ts         # AI-powered test fixing
-│   │       ├── claude-code-client.ts # Claude Code SDK client
-│   │       └── types.ts              # Provider types
 │   └── adapters/             # Language-specific adapters
 │       ├── base.ts           # Base adapter interface
 │       ├── registry.ts       # Adapter registry
