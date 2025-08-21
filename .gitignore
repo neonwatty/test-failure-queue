@@ -10,6 +10,7 @@ plans/
 .mcp.json
 *CLAUDE.md
 .plans/
+.mcp.json
 
 # Dependencies
 node_modules/
@@ -27,7 +28,6 @@ test-*.sh
 # Test coverage
 coverage/
 *.lcov
-.nyc_output/
 
 # IDE
 .vscode/
@@ -72,12 +72,12 @@ temp/
 .tsbuildinfo
 
 # Example project artifacts
-examples/projects/*/node_modules/
-examples/projects/*/venv/
-examples/projects/*/.venv/
-examples/projects/*/coverage/
-examples/projects/*/dist/
-examples/projects/rails8/tmp/
-examples/projects/rails8/log/
-examples/projects/rails8/storage/
-examples/projects/ruby/coverage/
+examples/core/*/node_modules/
+examples/core/*/venv/
+examples/core/*/.venv/
+examples/core/*/coverage/
+examples/core/*/dist/
+examples/core/rails8/tmp/
+examples/core/rails8/log/
+examples/core/rails8/storage/
+examples/core/ruby/coverage/

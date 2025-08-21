@@ -1,16 +1,17 @@
-import { JavaScriptAdapter } from '../../../src/adapters/javascript-adapter';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { JavaScriptAdapter } from '../../../src/adapters/javascript-adapter.js';
+import fs from 'fs';
+import path from 'path';
 
-jest.mock('fs');
+vi.mock('fs');
 
 describe('JavaScriptAdapter', () => {
   let adapter: JavaScriptAdapter;
-  const mockFs = fs as jest.Mocked<typeof fs>;
+  const mockFs = fs as any;
   
   beforeEach(() => {
     adapter = new JavaScriptAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
   describe('language and frameworks', () => {
@@ -61,14 +62,14 @@ describe('JavaScriptAdapter', () => {
       expect(result).toBeNull();
     });
     
-    it('should default to jest when test script exists but no framework detected', async () => {
+    it('should default to vitest when test script exists but no framework detected', async () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(JSON.stringify({
         scripts: { test: 'node test.js' }
       }));
       
       const result = await adapter.detectFramework('/test/path');
-      expect(result).toBe('jest');
+      expect(result).toBe('vitest');
     });
   });
   

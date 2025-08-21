@@ -1,16 +1,17 @@
-import { PythonAdapter } from '../../../src/adapters/python-adapter';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { PythonAdapter } from '../../../src/adapters/python-adapter.js';
+import fs from 'fs';
+import path from 'path';
 
-jest.mock('fs');
+vi.mock('fs');
 
 describe('PythonAdapter', () => {
   let adapter: PythonAdapter;
-  const mockFs = fs as jest.Mocked<typeof fs>;
+  const mockFs = fs as any;
   
   beforeEach(() => {
     adapter = new PythonAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
   describe('language and frameworks', () => {

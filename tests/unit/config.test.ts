@@ -1,8 +1,9 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import * as os from 'os';
-import { ConfigManager } from '../../src/config';
-import { TestLanguage } from '../../src/types';
+import { ConfigManager } from '../../src/core/config.js';
+import { TestLanguage } from '../../src/core/types.js';
 
 describe('ConfigManager', () => {
   let tempDir: string;
@@ -63,7 +64,7 @@ describe('ConfigManager', () => {
     });
 
     it('should validate defaultLanguage and warn on invalid language', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const config = {
         defaultLanguage: 'invalid' as any
       };
@@ -79,7 +80,7 @@ describe('ConfigManager', () => {
     });
 
     it('should validate defaultFrameworks and warn on invalid framework', () => {
-      const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const config = {
         defaultFrameworks: {
           javascript: 'invalid-framework'
@@ -127,6 +128,7 @@ describe('ConfigManager', () => {
       expect(config.testCommands).toHaveProperty('ruby:minitest');
       expect(config.testCommands).toHaveProperty('python:pytest');
     });
+
   });
 
   describe('Existing functionality', () => {

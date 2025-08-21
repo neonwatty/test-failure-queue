@@ -1,21 +1,22 @@
-import { TestRunner } from '../../src/test-runner';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { TestRunner } from '../../src/core/test-runner.js';
 import { execSync } from 'child_process';
-import { adapterRegistry } from '../../src/adapters/registry';
+import { adapterRegistry } from '../../src/adapters/registry.js';
 
-jest.mock('child_process');
+vi.mock('child_process');
 
 describe('TestRunner', () => {
-  const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+  const mockExecSync = execSync as any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('constructor', () => {
     it('should use default values when no options provided', () => {
       const runner = new TestRunner();
       expect(runner['language']).toBe('javascript');
-      expect(runner['framework']).toBe('jest');
+      expect(runner['framework']).toBe('vitest');
       expect(runner['command']).toBe('npm test');
     });
 
@@ -38,9 +39,9 @@ describe('TestRunner', () => {
     });
 
     it('should auto-detect language and framework', () => {
-      jest.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue('javascript');
+      vi.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue('javascript');
       const adapter = adapterRegistry.get('javascript');
-      jest.spyOn(adapter, 'detectFramework').mockReturnValue('vitest');
+      vi.spyOn(adapter, 'detectFramework').mockReturnValue('vitest');
 
       const runner = new TestRunner({ autoDetect: true });
       expect(runner['language']).toBe('javascript');
@@ -48,7 +49,7 @@ describe('TestRunner', () => {
     });
 
     it('should throw error when auto-detect fails', () => {
-      jest.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue(null);
+      vi.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue(null);
       
       expect(() => new TestRunner({ autoDetect: true }))
         .toThrow('Could not auto-detect project language');
@@ -67,7 +68,7 @@ describe('TestRunner', () => {
       expect(result.failingTests).toEqual([]);
       expect(result.totalFailures).toBe(0);
       expect(result.language).toBe('javascript');
-      expect(result.framework).toBe('jest');
+      expect(result.framework).toBe('vitest');
       expect(result.command).toBe('npm test');
       expect(result.stdout).toBe('All tests passed\n');
       expect(result.stderr).toBe('');
@@ -270,7 +271,7 @@ describe('TestRunner', () => {
 
     describe('detectLanguage', () => {
       it('should detect language from project', () => {
-        jest.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue('javascript');
+        vi.spyOn(adapterRegistry, 'detectLanguage').mockReturnValue('javascript');
         const language = TestRunner.detectLanguage('/path/to/project');
         expect(language).toBe('javascript');
       });
@@ -279,7 +280,7 @@ describe('TestRunner', () => {
     describe('detectFramework', () => {
       it('should detect framework for language', () => {
         const adapter = adapterRegistry.get('javascript');
-        jest.spyOn(adapter, 'detectFramework').mockReturnValue('jest');
+        vi.spyOn(adapter, 'detectFramework').mockReturnValue('jest');
         const framework = TestRunner.detectFramework('javascript', '/path/to/project');
         expect(framework).toBe('jest');
       });

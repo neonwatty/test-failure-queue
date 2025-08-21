@@ -1,9 +1,0 @@
-{
-  "language": "javascript",
-  "framework": "vitest",
-  "testCommand": "npm test",
-  "testDirectory": "tests",
-  "testPattern": "**/*.test.ts",
-  "priority": 1,
-  "autoDetect": true
-}

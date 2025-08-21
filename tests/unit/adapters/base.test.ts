@@ -1,4 +1,5 @@
-import { BaseAdapter, TestPattern, ParsedTestOutput } from '../../../src/adapters/base';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { BaseAdapter, TestPattern, ParsedTestOutput } from '../../../src/adapters/base.js';
 
 class TestAdapter extends BaseAdapter {
   readonly language = 'test';

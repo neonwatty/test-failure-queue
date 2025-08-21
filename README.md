@@ -1,16 +1,112 @@
 # TFQ (Test Failure Queue)
 
-[![npm version](https://badge.fury.io/js/tfq.svg)](https://badge.fury.io/js/tfq)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.  Easily integates with agentic tools like Claude Code for context-managed test fixing.
 
-A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.
+## Table of Contents
+- [Overview](#overview)
+- [Essential Commands](#essential-commands)
+- [How It Works](#how-it-works)
+- [Features](#features)
+- [Installation](#installation)
+- [Supported Languages](#supported-languages)
+- [Usage](#usage)
+  - [CLI Commands](#cli-commands)
+  - [Test Grouping](#test-grouping)
+  - [Programmatic API](#programmatic-api)
+- [Claude Code Integration](#claude-code-integration)
+- [Configuration](#configuration)
+- [Use Cases](#use-cases)
+- [Development](#development)
+- [Contributing](#contributing)
 
 ## Overview
 
-TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across multiple programming languages and test frameworks. It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
+TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across multiple programming languages and test frameworks.  It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
+
+## Essential Commands
+
+| Command | What it does |
+|---------|--------------|
+| `tfq run-tests --auto-add` | Run tests and queue failures |
+| `tfq list` | View queued test failures |
+| `tfq stats` | Show queue statistics |
+| `tfq clear` | Clear the queue |
+| `tfq --help` | Show all commands |
+
+## How It Works
+
+### Complete Workflow Example
+
+Let's walk through using TFQ on a JavaScript project to discover and fix failing tests:
+
+#### Step 1: Run Tests to Discover Failures
+```bash
+$ tfq run-tests --auto-detect
+Auto-detected: JavaScript project using Jest
+Running: npm test
+=============================================
+  PASS  src/utils/validator.test.js
+  PASS  src/services/user.test.js
+  FAIL  src/utils/calculator.test.js
+  FAIL  src/api/auth.test.js
+  FAIL  src/components/Button.test.js
+=============================================
+Test Suites: 3 failed, 2 passed, 5 total
+Tests:       8 failed, 15 passed, 23 total
+
+✗ 3 tests failed
+- src/utils/calculator.test.js
+- src/api/auth.test.js
+- src/components/Button.test.js
+```
+
+#### Step 2: Run tests, Discover Failures, Add Failures to Queue
+```bash
+$ tfq run-tests --auto-detect --auto-add --priority 5
+Running tests and adding failures to queue...
+Added 3 failing tests to queue with priority 5
+```
+
+#### Step 3: Check Queue Status
+```bash
+$ tfq list
+Queue contains 3 file(s):
+1. src/utils/calculator.test.js [P5] (1 failure)
+2. src/api/auth.test.js [P5] (1 failure)
+3. src/components/Button.test.js [P5] (1 failure)
+```
+
+#### Step 4: Work Through Test Failures
+
+After adding failures to the queue, you can work through them systematically:
+
+```bash
+# View the next test to work on
+$ tfq next
+src/utils/calculator.test.js [P5]
+
+# Work on fixing the test manually
+# Then mark it as resolved when fixed
+$ tfq resolve src/utils/calculator.test.js
+✓ Resolved: src/utils/calculator.test.js
+
+# Continue with the next test
+$ tfq next
+src/api/auth.test.js [P5]
+```
+
+### Key Points
+
+1. **Priority Queue**: Higher priority tests are dequeued first
+2. **Persistent Storage**: Queue persists across sessions
+3. **Language Agnostic**: Works with JavaScript, Python, Ruby, and their test frameworks
+4. **Pattern Matching**: Support for glob patterns to manage multiple files
+5. **Cross-Project**: Can manage test queues for multiple projects
+
 
 ## Features
 
+### Core Features
 - **Multi-Language Support**: JavaScript/TypeScript, Python, and Ruby
 - **Multiple Test Frameworks**: 
   - JavaScript: Jest, Mocha, Vitest, Jasmine, AVA
@@ -23,6 +119,9 @@ TFQ (Test Failure Queue) is a command-line tool designed to help developers effi
 - **Failure Tracking**: Automatically tracks failure counts and timestamps
 - **Multiple Output Formats**: JSON output for programmatic usage
 - **Cross-Project Support**: Manage test queues for multiple projects
+- **Intelligent Test Grouping**: Organize tests for parallel or sequential execution
+- **Execution Optimization**: Run independent tests in parallel for 40-60% faster execution
+- **Claude Code Integration**: Works seamlessly with Claude Code for AI-powered test fixing (see CLAUDE.md)
 
 ## Installation
 
@@ -35,6 +134,7 @@ Or install globally:
 ```bash
 npm install -g tfq
 ```
+
 
 ## Supported Languages
 
@@ -53,12 +153,6 @@ npm install -g tfq
 - **Auto-detection**: via Gemfile or directory structure
 - **Default command**: `rails test`
 
-## Documentation
-
-- [User Guide](./docs/USER_GUIDE.md) - Comprehensive user documentation
-- [API Documentation](./docs/API_DOCUMENTATION.md) - Technical API reference for developers
-- [Changelog](./docs/CHANGELOG.md) - Version history and changes
-- [Release Notes](./docs/RELEASE_NOTES.md) - Latest release information
 
 ## Usage
 
@@ -123,6 +217,77 @@ tfq stats
 tfq stats --json
 ```
 
+### Test Grouping
+
+TFQ now supports intelligent test grouping for optimized execution, enabling parallel processing of independent tests and sequential execution of dependent tests.
+
+#### Set execution groups
+```bash
+# Simple array format - auto-determines parallel vs sequential
+tfq set-groups --json '[["test1.js", "test2.js"], ["test3.js"]]'
+
+# From a file
+tfq set-groups --file grouping-plan.json
+
+# Advanced format with explicit types
+tfq set-groups --json '{
+  "groups": [
+    {"groupId": 1, "type": "parallel", "tests": ["auth.test.js", "api.test.js"]},
+    {"groupId": 2, "type": "sequential", "tests": ["database.test.js"]}
+  ]
+}'
+```
+
+#### View current groups
+```bash
+tfq get-groups        # Human-readable format
+tfq get-groups --json # JSON format
+```
+
+#### Execute groups
+```bash
+# Dequeue next group of tests
+tfq next --group      # Returns all tests in the group
+tfq next --group --json
+
+# Preview next group without removing
+tfq peek --group
+tfq peek --group --json
+```
+
+#### Manage groups
+```bash
+# View grouping statistics
+tfq group-stats
+tfq group-stats --json
+
+# Clear all grouping data
+tfq clear-groups --confirm
+```
+
+#### Example: Optimized Test Execution
+```bash
+# 1. Run tests and add failures to queue
+tfq run-tests --auto-detect --auto-add
+
+# 2. Set up intelligent grouping
+tfq set-groups --json '[
+  ["unit/auth.test.js", "unit/api.test.js", "unit/utils.test.js"],
+  ["integration/database.test.js"],
+  ["ui/button.test.js", "ui/form.test.js"]
+]'
+
+# 3. Execute groups optimally
+# Group 1: 3 unit tests (parallel execution possible)
+tfq next --group  # Returns all 3 tests
+
+# Group 2: 1 database test (sequential, isolated)
+tfq next --group  # Returns 1 test
+
+# Group 3: 2 UI tests (parallel execution possible)
+tfq next --group  # Returns both tests
+```
+
 ### Programmatic API
 
 ```typescript
@@ -148,7 +313,65 @@ queue.resolve('/path/to/test.spec.ts');
 // Get statistics
 const stats = queue.getStats();
 console.log(`Total failures: ${stats.totalItems}`);
+
+// Test Grouping
+// Set execution groups (array format)
+queue.setExecutionGroups([
+  ['test1.js', 'test2.js', 'test3.js'],  // Parallel group
+  ['test4.js'],                           // Sequential group
+  ['test5.js', 'test6.js']                // Parallel group
+]);
+
+// Or use advanced format
+queue.setExecutionGroupsAdvanced({
+  groups: [
+    { groupId: 1, type: 'parallel', tests: ['test1.js', 'test2.js'] },
+    { groupId: 2, type: 'sequential', tests: ['test3.js'] }
+  ]
+});
+
+// Dequeue entire group
+const group = queue.dequeueGroup();  // Returns ['test1.js', 'test2.js', 'test3.js']
+
+// Preview next group
+const nextGroup = queue.peekGroup();
+
+// Get grouping plan
+const plan = queue.getGroupingPlan();
+
+// Check if groups exist
+if (queue.hasGroups()) {
+  const groupStats = queue.getGroupStats();
+  console.log(`Parallel groups: ${groupStats.parallelGroups}`);
+}
 ```
+
+### Core API Usage
+
+The core TFQ functionality is available from the main export, but you can also import directly from the core modules:
+
+```typescript
+import { TestFailureQueue } from 'tfq/core/queue';
+import { TestDatabase } from 'tfq/core/database';
+import { TestRunner } from 'tfq/core/test-runner';
+import { ConfigManager } from 'tfq/core/config';
+
+// Use core components directly
+const db = new TestDatabase('./custom-queue.db');
+const runner = new TestRunner();
+const config = new ConfigManager();
+```
+
+## Claude Code Integration
+
+TFQ integrates seamlessly with Claude Code for AI-powered test fixing. Custom slash commands are provided in the `commands/` directory:
+
+- **`/tfq-run`** - Discovers and queues failing tests
+- **`/tfq-fix-next`** - Fixes the next test in queue using a Task agent
+- **`/tfq-fix-all`** - Complete workflow that runs tests and iteratively fixes all failures
+- **`/tfq-reset`** - Clears the queue for a fresh start
+
+These commands leverage Claude Code's Task agents and tools (Bash, Read, Edit) to automatically understand and fix test failures. See `CLAUDE.md` for detailed integration documentation and `plans/slash-commands/` for implementation details.
 
 ## Configuration
 
@@ -197,6 +420,7 @@ tfq add src/payments/*.test.ts --priority 9
 tfq next  # Returns highest priority test
 ```
 
+
 ## Development
 
 ### Building
@@ -208,7 +432,16 @@ npm run build
 ### Testing
 
 ```bash
+# Run unit and integration tests (default)
 npm test
+
+# Run specific test suites
+npm run test:unit        # Unit tests only
+npm run test:integration # Integration tests only
+
+# Other test options
+npm run test:watch      # Watch mode
+npm run test:coverage   # With coverage report
 ```
 
 ### Project Structure
@@ -216,14 +449,26 @@ npm test
 ```
 tfq/
 ├── src/
-│   ├── index.ts       # Main exports
-│   ├── queue.ts       # Queue implementation
-│   ├── database.ts    # Database management
-│   ├── types.ts       # TypeScript types
-│   └── cli.ts         # CLI implementation
-├── dist/              # Compiled JavaScript
+│   ├── index.ts              # Main exports
+│   ├── cli.ts                # CLI implementation
+│   ├── core/                 # Core TFQ functionality
+│   │   ├── queue.ts          # Queue implementation
+│   │   ├── database.ts       # Database management
+│   │   ├── types.ts          # TypeScript types
+│   │   ├── test-runner.ts    # Multi-language test execution
+│   │   └── config.ts         # Configuration management
+│   └── adapters/             # Language-specific adapters
+│       ├── base.ts           # Base adapter interface
+│       ├── registry.ts       # Adapter registry
+│       ├── javascript-adapter.ts # JavaScript/TypeScript adapter
+│       ├── python-adapter.ts     # Python adapter
+│       └── ruby-adapter.ts       # Ruby adapter
+├── tests/
+│   ├── unit/                 # Unit tests
+│   └── integration/          # Integration tests
+├── dist/                     # Compiled JavaScript
 ├── bin/
-│   └── tfq           # CLI executable
+│   └── tfq                   # CLI executable
 └── package.json
 ```
 

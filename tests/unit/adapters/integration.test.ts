@@ -1,26 +1,27 @@
-import { TestRunner } from '../../../src/test-runner';
-import { adapterRegistry } from '../../../src/adapters/registry';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { TestRunner } from '../../../src/core/test-runner.js';
+import { adapterRegistry } from '../../../src/adapters/registry.js';
 import { execSync } from 'child_process';
-import { getTestOutput, getExpectedFailures } from '../../integration/fixtures/test-outputs';
+import { getTestOutput, getExpectedFailures } from '../../integration/fixtures/test-outputs.js';
 import { 
   mockProjects, 
   setupMockProject, 
   cleanupMockProject, 
   expectedDetections 
-} from '../../integration/fixtures/mock-projects';
-import { TestLanguage } from '../../../src/types';
-import * as fs from 'fs';
+} from '../../integration/fixtures/mock-projects.js';
+import { TestLanguage } from '../../../src/types.js';
+import fs from 'fs';
 import * as os from 'os';
-import * as path from 'path';
+import path from 'path';
 
-jest.mock('child_process');
+vi.mock('child_process');
 
 describe('Multi-Language Adapter Integration Tests', () => {
-  const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+  const mockExecSync = execSync as any;
   let tempDir: string;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tfq-test-'));
   });
 

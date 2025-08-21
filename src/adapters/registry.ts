@@ -1,10 +1,10 @@
-import { TestLanguage, AdapterInfo, AdapterRegistry } from '../types';
-import { LanguageAdapter } from './base';
-import { JavaScriptAdapter } from './javascript-adapter';
-import { RubyAdapter } from './ruby-adapter';
-import { PythonAdapter } from './python-adapter';
-import * as fs from 'fs';
-import * as path from 'path';
+import { TestLanguage, AdapterInfo, AdapterRegistry } from '../core/types.js';
+import { LanguageAdapter } from './base.js';
+import { JavaScriptAdapter } from './javascript-adapter.js';
+import { RubyAdapter } from './ruby-adapter.js';
+import { PythonAdapter } from './python-adapter.js';
+import fs from 'fs';
+import path from 'path';
 
 export class TestAdapterRegistry implements AdapterRegistry {
   private adapters: Map<TestLanguage, LanguageAdapter> = new Map();

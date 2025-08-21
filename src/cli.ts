@@ -2,13 +2,15 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { TestFailureQueue } from './queue';
-import { QueueItem, ConfigFile, TestFramework, TestLanguage } from './types';
-import { ConfigManager, loadConfig } from './config';
-import { TestRunner } from './test-runner';
-import { adapterRegistry } from './adapters/registry';
-import * as fs from 'fs';
-import * as path from 'path';
+import { TestFailureQueue } from './core/queue.js';
+import { QueueItem, ConfigFile, TestFramework, TestLanguage } from './core/types.js';
+import { ConfigManager, loadConfig } from './core/config.js';
+import { TestRunner } from './core/test-runner.js';
+import { adapterRegistry } from './adapters/registry.js';
+// Claude provider removed - no longer supported
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 const program = new Command();
 let config: ConfigFile = {};
@@ -94,26 +96,56 @@ program
   });
 
 program
-  .command('next')
-  .description('Get and remove the next file from the queue')
+  .command('next') 
+  .description('Get and remove the next item(s) from the queue')
+  .option('--group', 'Get next group of files')
   .option('--json', 'Output in JSON format', config.jsonOutput || false)
   .action((options) => {
     try {
-      const filePath = queue.dequeue();
-      
-      if (filePath) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ success: true, filePath }));
+      if (options.group) {
+        // Get group info before dequeuing for metadata
+        const groupInfo = queue.peekGroup();
+        const type = groupInfo && groupInfo[0]?.groupType || 'unknown';
+        
+        // Now dequeue the group
+        const group = queue.dequeueGroup();
+        
+        if (group && group.length > 0) {
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ 
+              success: true, 
+              type,
+              tests: group 
+            }));
+          } else {
+            console.log(group.join('\n'));
+          }
         } else {
-          console.log(filePath);
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ success: false, message: 'No groups available' }));
+          } else {
+            console.log(chalk.yellow('No groups available'));
+          }
+          process.exit(1);
         }
       } else {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ success: false, message: 'Queue is empty' }));
+        // Regular single file dequeue
+        const filePath = queue.dequeue();
+        
+        if (filePath) {
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ success: true, filePath }));
+          } else {
+            console.log(filePath);
+          }
         } else {
-          console.log(chalk.yellow('Queue is empty'));
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ success: false, message: 'Queue is empty' }));
+          } else {
+            console.log(chalk.yellow('Queue is empty'));
+          }
+          process.exit(1);
         }
-        process.exit(1);
       }
     } catch (error: any) {
       if (useJsonOutput(options)) {
@@ -128,24 +160,53 @@ program
 program
   .command('peek')
   .description('View the next file without removing it')
+  .option('--group', 'Peek at next group')
   .option('--json', 'Output in JSON format', config.jsonOutput || false)
   .action((options) => {
     try {
-      const filePath = queue.peek();
-      
-      if (filePath) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ success: true, filePath }));
+      if (options.group) {
+        // Peek at next group
+        const group = queue.peekGroup();
+        
+        if (group && group.length > 0) {
+          if (useJsonOutput(options)) {
+            const type = group[0]?.groupType || 'unknown';
+            console.log(JSON.stringify({ 
+              success: true, 
+              type,
+              tests: group.map(g => g.filePath) 
+            }));
+          } else {
+            const type = group[0]?.groupType || 'unknown';
+            console.log(chalk.bold(`Next group (${type}):`));
+            group.forEach(item => console.log(`  - ${item.filePath}`));
+          }
         } else {
-          console.log(filePath);
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ success: false, message: 'No groups available' }));
+          } else {
+            console.log(chalk.yellow('No groups available'));
+          }
+          process.exit(1);
         }
       } else {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ success: false, message: 'Queue is empty' }));
+        // Regular single file peek
+        const filePath = queue.peek();
+        
+        if (filePath) {
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ success: true, filePath }));
+          } else {
+            console.log(filePath);
+          }
         } else {
-          console.log(chalk.yellow('Queue is empty'));
+          if (useJsonOutput(options)) {
+            console.log(JSON.stringify({ success: false, message: 'Queue is empty' }));
+          } else {
+            console.log(chalk.yellow('Queue is empty'));
+          }
+          process.exit(1);
         }
-        process.exit(1);
       }
     } catch (error: any) {
       if (useJsonOutput(options)) {
@@ -525,7 +586,9 @@ program
               console.log(chalk.blue('\nAdding failures to queue...'));
               
               result.failingTests.forEach(test => {
-                queue.enqueue(test, priority);
+                const absolutePath = path.resolve(test);
+                // Pass stderr as error context for Claude
+                queue.enqueue(absolutePath, priority, result.stderr || result.stdout);
               });
               
               console.log(chalk.green('✓'), `Added ${result.failingTests.length} test(s) to queue`);
@@ -593,6 +656,205 @@ program
   });
 
 program
+  .command('set-groups')
+  .description('Set execution groups for queued tests')
+  .option('--json <data>', 'JSON data containing groups')
+  .option('--file <path>', 'Path to JSON file containing groups')
+  .option('--json-output', 'Output result in JSON format')
+  .action((options) => {
+    try {
+      let groupData: any;
+      
+      if (options.file) {
+        const fileContent = fs.readFileSync(options.file, 'utf-8');
+        groupData = JSON.parse(fileContent);
+      } else if (options.json) {
+        groupData = JSON.parse(options.json);
+      } else {
+        throw new Error('Either --json or --file option is required');
+      }
+
+      // Support both simple array format and advanced format
+      if (Array.isArray(groupData)) {
+        // Simple format: [["test1", "test2"], ["test3"]]
+        // Resolve paths to absolute to match how files are added
+        const resolvedGroups = groupData.map((group: string[]) => 
+          group.map((file: string) => path.resolve(file))
+        );
+        queue.setExecutionGroups(resolvedGroups);
+      } else if (groupData.groups && Array.isArray(groupData.groups)) {
+        // Advanced format with ExecutionGroup objects
+        if (groupData.groups.every((g: any) => Array.isArray(g))) {
+          // Array of arrays within groups property
+          const resolvedGroups = groupData.groups.map((group: string[]) => 
+            group.map((file: string) => path.resolve(file))
+          );
+          queue.setExecutionGroups(resolvedGroups);
+        } else {
+          // Full GroupingPlan format - resolve paths in tests arrays
+          const resolvedPlan = {
+            ...groupData,
+            groups: groupData.groups.map((group: any) => ({
+              ...group,
+              tests: group.tests.map((file: string) => path.resolve(file))
+            }))
+          };
+          queue.setExecutionGroupsAdvanced(resolvedPlan);
+        }
+      } else {
+        throw new Error('Invalid group data format');
+      }
+
+      const stats = queue.getGroupStats();
+      
+      if (options.jsonOutput) {
+        console.log(JSON.stringify({ 
+          success: true, 
+          message: 'Groups set successfully',
+          stats 
+        }));
+      } else {
+        console.log(chalk.green('✓'), 'Groups set successfully');
+        console.log(chalk.gray(`Total groups: ${stats.totalGroups}`));
+        console.log(chalk.gray(`Parallel groups: ${stats.parallelGroups}`));
+        console.log(chalk.gray(`Sequential groups: ${stats.sequentialGroups}`));
+      }
+    } catch (error: any) {
+      if (options.jsonOutput) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command('get-groups')
+  .description('View current execution groups')
+  .option('--json', 'Output in JSON format')
+  .action((options) => {
+    try {
+      const plan = queue.getGroupingPlan();
+      
+      if (!plan) {
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ 
+            success: true, 
+            message: 'No groups configured',
+            groups: [] 
+          }));
+        } else {
+          console.log(chalk.yellow('No groups configured'));
+        }
+        return;
+      }
+
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ 
+          success: true,
+          ...plan
+        }));
+      } else {
+        console.log(chalk.bold('\nExecution Groups:\n'));
+        plan.groups.forEach((group, index) => {
+          const typeIcon = group.type === 'parallel' ? '⚡' : '→';
+          console.log(`${chalk.cyan(`Group ${group.groupId}`)} ${typeIcon} ${chalk.gray(group.type)}`);
+          group.tests.forEach(test => {
+            console.log(`  - ${test}`);
+          });
+        });
+        console.log();
+      }
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command('clear-groups')
+  .description('Clear all grouping data')
+  .option('--confirm', 'Skip confirmation prompt')
+  .option('--json', 'Output in JSON format')
+  .action((options) => {
+    try {
+      if (!queue.hasGroups()) {
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ 
+            success: true, 
+            message: 'No groups to clear' 
+          }));
+        } else {
+          console.log(chalk.yellow('No groups to clear'));
+        }
+        return;
+      }
+
+      const stats = queue.getGroupStats();
+      
+      if (!options.confirm && !options.json) {
+        console.log(chalk.yellow(`This will clear grouping data for ${stats.totalGroups} group(s).`));
+        console.log('Use --confirm to skip this prompt.');
+        process.exit(0);
+      }
+
+      queue.clearGroups();
+      
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ 
+          success: true, 
+          message: 'Groups cleared',
+          clearedGroups: stats.totalGroups 
+        }));
+      } else {
+        console.log(chalk.green('✓'), `Cleared ${stats.totalGroups} group(s)`);
+      }
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command('group-stats')
+  .description('Show grouping statistics')
+  .option('--json', 'Output in JSON format')
+  .action((options) => {
+    try {
+      const stats = queue.getGroupStats();
+      
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ 
+          success: true,
+          ...stats
+        }));
+      } else {
+        console.log(chalk.bold('\nGrouping Statistics:\n'));
+        console.log(`Total groups: ${chalk.cyan(stats.totalGroups)}`);
+        console.log(`Parallel groups: ${chalk.yellow(stats.parallelGroups)}`);
+        console.log(`Sequential groups: ${chalk.blue(stats.sequentialGroups)}`);
+        console.log();
+      }
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
   .command('languages')
   .description('List all supported languages and their test frameworks')
   .option('--json', 'Output in JSON format')
@@ -633,6 +895,8 @@ program
     }
   });
 
+// fix-tests command removed - Claude provider no longer supported
+
 program
   .command('config')
   .description('Manage configuration')
@@ -662,8 +926,8 @@ program
           console.log('No config file found. Using defaults.');
           console.log('\nConfig file search paths (in order):');
           console.log('  1.', chalk.cyan(path.join(process.cwd(), '.tfqrc')));
-          console.log('  2.', chalk.cyan(path.join(require('os').homedir(), '.tfqrc')));
-          console.log('  3.', chalk.cyan(path.join(require('os').homedir(), '.tfq', 'config.json')));
+          console.log('  2.', chalk.cyan(path.join(os.homedir(), '.tfqrc')));
+          console.log('  3.', chalk.cyan(path.join(os.homedir(), '.tfq', 'config.json')));
         }
         return;
       }

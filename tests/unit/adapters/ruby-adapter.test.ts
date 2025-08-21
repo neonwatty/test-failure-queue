@@ -1,16 +1,17 @@
-import { RubyAdapter } from '../../../src/adapters/ruby-adapter';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { RubyAdapter } from '../../../src/adapters/ruby-adapter.js';
+import fs from 'fs';
+import path from 'path';
 
-jest.mock('fs');
+vi.mock('fs');
 
 describe('RubyAdapter', () => {
   let adapter: RubyAdapter;
-  const mockFs = fs as jest.Mocked<typeof fs>;
+  const mockFs = fs as any;
   
   beforeEach(() => {
     adapter = new RubyAdapter();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
   describe('language and frameworks', () => {

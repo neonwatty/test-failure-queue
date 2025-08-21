@@ -1,12 +1,13 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import * as os from 'os';
-import { TestRunner } from '../../src/test-runner';
-import { ConfigManager } from '../../src/config';
+import { TestRunner } from '../../src/core/test-runner.js';
+import { ConfigManager } from '../../src/core/config.js';
 import { execSync } from 'child_process';
 
-jest.mock('child_process');
-const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
+vi.mock('child_process');
+const mockExecSync = execSync as any;
 
 describe('TestRunner with Config', () => {
   let tempDir: string;
@@ -28,7 +29,7 @@ describe('TestRunner with Config', () => {
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Default Language from Config', () => {

@@ -1,9 +1,14 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { spawn, exec } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
+import path from 'path';
+import fs from 'fs';
 import * as os from 'os';
 import { promisify } from 'util';
-const kill = require('tree-kill');
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import kill from 'tree-kill';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const execAsync = promisify(exec);
 
