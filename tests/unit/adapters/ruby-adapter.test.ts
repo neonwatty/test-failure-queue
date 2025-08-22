@@ -20,7 +20,7 @@ describe('RubyAdapter', () => {
     });
     
     it('should support multiple frameworks', () => {
-      expect(adapter.supportedFrameworks).toEqual(['minitest']);
+      expect(adapter.supportedFrameworks).toEqual(['minitest', 'rspec']);
     });
   });
   
@@ -126,6 +126,7 @@ describe('RubyAdapter', () => {
   describe('validateFramework', () => {
     it('should validate supported frameworks', () => {
       expect(adapter.validateFramework('minitest')).toBe(true);
+      expect(adapter.validateFramework('rspec')).toBe(true);
     });
     
     it('should reject unsupported frameworks', () => {
@@ -134,6 +135,7 @@ describe('RubyAdapter', () => {
     
     it('should be case-insensitive', () => {
       expect(adapter.validateFramework('MINITEST')).toBe(true);
+      expect(adapter.validateFramework('RSPEC')).toBe(true);
     });
   });
 });

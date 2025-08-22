@@ -4,7 +4,7 @@ import { BaseAdapter, TestPattern, ParsedTestOutput } from './base.js';
 
 export class RubyAdapter extends BaseAdapter {
   readonly language = 'ruby';
-  readonly supportedFrameworks = ['minitest'];
+  readonly supportedFrameworks = ['minitest', 'rspec'];
   readonly defaultFramework = 'minitest';
   
   detectFramework(projectPath?: string): string | null {
@@ -22,6 +22,13 @@ export class RubyAdapter extends BaseAdapter {
       gemfileContent = fs.readFileSync(gemfileLockPath, 'utf-8');
     }
     
+    // Check for RSpec
+    if (gemfileContent.includes('rspec') || 
+        fs.existsSync(specDir) ||
+        fs.existsSync(path.join(basePath, '.rspec'))) {
+      return 'rspec';
+    }
+    
     // Check for minitest or Rails (which uses minitest by default)
     if (gemfileContent.includes('minitest') || 
         gemfileContent.includes('rails') ||
@@ -37,6 +44,12 @@ export class RubyAdapter extends BaseAdapter {
     const basePath = testPath || '';
     
     switch (framework.toLowerCase()) {
+      case 'rspec':
+        if (testPath) {
+          return `rspec ${basePath}`;
+        }
+        return 'rspec';
+        
       case 'minitest':
         // Check if this is a Rails project
         const isRails = fs.existsSync(path.join(process.cwd(), 'config/application.rb')) ||
@@ -62,6 +75,28 @@ export class RubyAdapter extends BaseAdapter {
   
   getFailurePatterns(framework: string): TestPattern[] {
     switch (framework.toLowerCase()) {
+      case 'rspec':
+        return [
+          {
+            // RSpec failure format: file.rb:line
+            pattern: /^\s+#\s+(.+\.rb):(\d+)/gm,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: match[1],
+              line: parseInt(match[2], 10)
+            })
+          },
+          {
+            // Alternative RSpec format in stack traces
+            pattern: /^\s+(.+\.rb):(\d+):in\s/gm,
+            type: 'failure',
+            extractLocation: (match) => ({
+              file: match[1],
+              line: parseInt(match[2], 10)
+            })
+          }
+        ];
+        
       case 'minitest':
         return [
           {

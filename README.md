@@ -27,6 +27,7 @@ TFQ (Test Failure Queue) is a command-line tool designed to help developers effi
 
 | Command | What it does |
 |---------|--------------|
+| `tfq init` | Initialize TFQ for your project |
 | `tfq run-tests --auto-add` | Run tests and queue failures |
 | `tfq list` | View queued test failures |
 | `tfq stats` | Show queue statistics |
@@ -38,6 +39,29 @@ TFQ (Test Failure Queue) is a command-line tool designed to help developers effi
 ### Complete Workflow Example
 
 Let's walk through using TFQ on a JavaScript project to discover and fix failing tests:
+
+#### Step 0: Initialize TFQ for Your Project
+```bash
+$ tfq init
+Analyzing project at: /path/to/your/project
+
+✓ Detected language: javascript
+✓ Detected framework: vitest
+
+✓ TFQ initialized successfully!
+
+Configuration saved to: .tfqrc
+
+Detected:
+  Language: javascript
+  Framework: vitest
+  Database: ./.tfq/queue.db
+
+Next steps:
+  1. Run your tests: tfq run-tests --auto-detect --auto-add
+  2. View queued failures: tfq list
+  3. Get next test to fix: tfq next
+```
 
 #### Step 1: Run Tests to Discover Failures
 ```bash
@@ -135,6 +159,22 @@ Or install globally:
 npm install -g tfq
 ```
 
+### Getting Started
+
+After installation, initialize TFQ in your project:
+
+```bash
+tfq init
+```
+
+This command will:
+- Auto-detect your project's language and test framework
+- Create a `.tfqrc` configuration file
+- Set up a project-local database (`./.tfq/queue.db`)
+- Add `.tfq/` to your `.gitignore` (if in a git repository)
+
+**Note:** If you install TFQ globally, each project should run `tfq init` to create its own database. Without initialization, all projects would share the same global database at `~/.tfq/queue.db`.
+
 
 ## Supported Languages
 
@@ -157,6 +197,48 @@ npm install -g tfq
 ## Usage
 
 ### CLI Commands
+
+#### Initialize TFQ for your project
+```bash
+# Basic initialization with auto-detection
+tfq init
+
+# Interactive setup mode
+tfq init --interactive
+
+# Initialize with custom database path
+tfq init --db-path ./custom/path.db
+
+# Initialize for CI environment
+tfq init --ci
+
+# Initialize for monorepo with workspaces
+tfq init --workspace-mode
+
+# Initialize specific sub-project in monorepo
+tfq init --scope packages/my-app
+
+# Skip gitignore modification
+tfq init --no-gitignore
+
+# JSON output for programmatic use
+tfq init --json
+```
+
+The `init` command creates a `.tfqrc` configuration file with:
+- Project-specific database location (default: `./.tfq/queue.db`)
+- Auto-detected language and test framework
+- Default settings for test execution
+
+**Options:**
+- `--db-path <path>`: Custom database location
+- `--interactive`: Step-by-step configuration wizard
+- `--ci`: Use CI-friendly settings (temp database)
+- `--shared`: Create team-shared configuration
+- `--workspace-mode`: Configure for monorepo
+- `--scope <path>`: Target specific directory
+- `--no-gitignore`: Don't modify .gitignore
+- `--json`: Output configuration as JSON
 
 #### List supported languages and frameworks
 ```bash

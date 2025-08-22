@@ -44,6 +44,23 @@ export interface ConfigFile {
   testCommands?: Record<string, string>;
 }
 
+export interface TfqConfig {
+  database?: {
+    path?: string;
+  };
+  language?: string;
+  framework?: string;
+  defaults?: {
+    autoAdd?: boolean;
+    parallel?: number;
+  };
+  workspaces?: Record<string, string>;
+  workspaceDefaults?: {
+    autoAdd?: boolean;
+    parallel?: number;
+  };
+}
+
 export type TestLanguage = 'javascript' | 'ruby' | 'python' | 'go' | 'java';
 
 export type TestFramework = string;
@@ -54,6 +71,7 @@ export interface TestRunnerOptions {
   command?: string;
   autoDetect?: boolean;
   skipUnsupportedCheck?: boolean;
+  verbose?: boolean;
 }
 
 export interface TestRunResult {

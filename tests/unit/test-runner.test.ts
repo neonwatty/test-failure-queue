@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { TestRunner } from '../../src/core/test-runner.js';
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import { adapterRegistry } from '../../src/adapters/registry.js';
 
 vi.mock('child_process');
 
 describe('TestRunner', () => {
   const mockExecSync = execSync as any;
+  const mockSpawnSync = spawnSync as any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -213,6 +214,136 @@ describe('TestRunner', () => {
 
       expect(result.duration).toBeGreaterThanOrEqual(0);
       expect(typeof result.duration).toBe('number');
+    });
+  });
+
+  describe('verbose mode', () => {
+    let originalStdoutWrite: any;
+    let originalStderrWrite: any;
+    let stdoutOutput: string;
+    let stderrOutput: string;
+
+    beforeEach(() => {
+      // Mock process.stdout.write and process.stderr.write
+      originalStdoutWrite = process.stdout.write;
+      originalStderrWrite = process.stderr.write;
+      stdoutOutput = '';
+      stderrOutput = '';
+      
+      process.stdout.write = vi.fn((chunk: any) => {
+        stdoutOutput += chunk;
+        return true;
+      });
+      
+      process.stderr.write = vi.fn((chunk: any) => {
+        stderrOutput += chunk;
+        return true;
+      });
+    });
+
+    afterEach(() => {
+      process.stdout.write = originalStdoutWrite;
+      process.stderr.write = originalStderrWrite;
+    });
+
+    it('should set verbose flag from options', () => {
+      const runner = new TestRunner({ verbose: true });
+      expect(runner['verbose']).toBe(true);
+    });
+
+    it('should default verbose to false when not provided', () => {
+      const runner = new TestRunner();
+      expect(runner['verbose']).toBe(false);
+    });
+
+    it('should use spawnSync when verbose mode is enabled', () => {
+      const testOutput = 'Running tests...\nTest 1 passed\nTest 2 failed';
+      mockSpawnSync.mockReturnValue({
+        status: 1,
+        stdout: testOutput,
+        stderr: 'Error output',
+        error: null
+      });
+
+      const runner = new TestRunner({ verbose: true });
+      const result = runner.run();
+
+      expect(mockSpawnSync).toHaveBeenCalled();
+      expect(mockExecSync).not.toHaveBeenCalled();
+      expect(result.stdout).toBe(testOutput);
+      expect(result.stderr).toBe('Error output');
+    });
+
+    it('should use execSync when verbose mode is disabled', () => {
+      mockExecSync.mockReturnValue('Test output');
+
+      const runner = new TestRunner({ verbose: false });
+      runner.run();
+
+      expect(mockExecSync).toHaveBeenCalled();
+      expect(mockSpawnSync).not.toHaveBeenCalled();
+    });
+
+    it('should output to console in verbose mode', () => {
+      const testOutput = 'Test suite running...\nAll tests passed!';
+      const errorOutput = 'Warning: deprecated function';
+      
+      mockSpawnSync.mockReturnValue({
+        status: 0,
+        stdout: testOutput,
+        stderr: errorOutput,
+        error: null
+      });
+
+      const runner = new TestRunner({ verbose: true });
+      runner.run();
+
+      expect(process.stdout.write).toHaveBeenCalledWith(testOutput);
+      expect(process.stderr.write).toHaveBeenCalledWith(errorOutput);
+      expect(stdoutOutput).toBe(testOutput);
+      expect(stderrOutput).toBe(errorOutput);
+    });
+
+    it('should still parse failing tests in verbose mode', () => {
+      const jestOutput = `
+        FAIL src/tests/auth.test.ts
+        FAIL src/tests/api.test.ts
+        Test suite failed
+      `;
+
+      mockSpawnSync.mockReturnValue({
+        status: 1,
+        stdout: jestOutput,
+        stderr: '',
+        error: null
+      });
+
+      const runner = new TestRunner({ verbose: true, framework: 'jest' });
+      const result = runner.run();
+
+      expect(result.success).toBe(false);
+      expect(result.exitCode).toBe(1);
+      expect(result.failingTests).toEqual([
+        'src/tests/auth.test.ts',
+        'src/tests/api.test.ts'
+      ]);
+    });
+
+    it('should handle spawnSync errors in verbose mode', () => {
+      const error = new Error('Command not found');
+      mockSpawnSync.mockReturnValue({
+        status: 127,
+        stdout: '',
+        stderr: '',
+        error: error
+      });
+
+      const runner = new TestRunner({ verbose: true });
+      const result = runner.run();
+
+      expect(result.success).toBe(false);
+      expect(result.exitCode).toBe(127);
+      expect(result.error).toBe('Command not found');
     });
   });
 

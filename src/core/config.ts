@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ConfigFile, TestLanguage, TestFramework } from './types.js';
+import { ConfigFile, TestLanguage, TestFramework, TfqConfig } from './types.js';
 import { TestAdapterRegistry } from '../adapters/registry.js';
 
 export class ConfigManager {
@@ -156,6 +156,76 @@ export class ConfigManager {
       JSON.stringify(defaultConfig, null, 2),
       'utf-8'
     );
+  }
+
+  writeConfig(config: TfqConfig, targetPath?: string): void {
+    const configPath = targetPath || path.join(process.cwd(), '.tfqrc');
+    
+    // Convert TfqConfig to ConfigFile format
+    const configFile: ConfigFile = {};
+    
+    if (config.database?.path) {
+      configFile.databasePath = config.database.path;
+    }
+    
+    if (config.language) {
+      configFile.defaultLanguage = config.language as TestLanguage;
+    }
+    
+    if (config.framework && config.language) {
+      configFile.defaultFrameworks = {
+        ...configFile.defaultFrameworks,
+        [config.language as TestLanguage]: config.framework
+      } as Record<TestLanguage, TestFramework>;
+    }
+    
+    if (config.defaults) {
+      if (config.defaults.autoAdd !== undefined) {
+        configFile.autoCleanup = config.defaults.autoAdd;
+      }
+    }
+    
+    // Create directory if it doesn't exist
+    const dir = path.dirname(configPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify(config, null, 2),
+      'utf-8'
+    );
+  }
+
+  mergeConfigs(base: TfqConfig, override: TfqConfig): TfqConfig {
+    const merged: TfqConfig = { ...base };
+    
+    if (override.database) {
+      merged.database = { ...base.database, ...override.database };
+    }
+    
+    if (override.language) {
+      merged.language = override.language;
+    }
+    
+    if (override.framework) {
+      merged.framework = override.framework;
+    }
+    
+    if (override.defaults) {
+      merged.defaults = { ...base.defaults, ...override.defaults };
+    }
+    
+    if (override.workspaces) {
+      merged.workspaces = { ...base.workspaces, ...override.workspaces };
+    }
+    
+    if (override.workspaceDefaults) {
+      merged.workspaceDefaults = { ...base.workspaceDefaults, ...override.workspaceDefaults };
+    }
+    
+    return merged;
   }
 
   static getInstance(customConfigPath?: string): ConfigManager {

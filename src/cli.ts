@@ -11,6 +11,14 @@ import { adapterRegistry } from './adapters/registry.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Get package.json to read version
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 
 const program = new Command();
 let config: ConfigFile = {};
@@ -40,7 +48,7 @@ function formatItemJson(item: QueueItem): object {
 program
   .name('tfq')
   .description('Test Failure Queue - Manage failed test files')
-  .version('1.0.0')
+  .version(packageJson.version)
   .option('--config <path>', 'Path to custom config file')
   .hook('preAction', (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
@@ -433,6 +441,7 @@ program
   .option('--list-frameworks', 'List available frameworks for the language')
   .option('--auto-add', 'Automatically add failing tests to queue')
   .option('-p, --priority <number>', 'Priority for auto-added tests', '0')
+  .option('-v, --verbose', 'Show test output in real-time')
   .option('--skip-unsupported-check', 'Skip checking for unsupported frameworks (not recommended)')
   .option('--json', 'Output in JSON format')
   .action((command: string | undefined, options) => {
@@ -542,7 +551,8 @@ program
         command: testCommand,
         language: language as TestLanguage,
         framework: framework as TestFramework,
-        skipUnsupportedCheck: options.skipUnsupportedCheck
+        skipUnsupportedCheck: options.skipUnsupportedCheck,
+        verbose: options.verbose && !useJsonOutput(options)  // Disable verbose in JSON mode
       });
 
       if (!useJsonOutput(options)) {
@@ -552,10 +562,24 @@ program
         if (testCommand) {
           console.log(chalk.gray(`Command: ${testCommand}`));
         }
+        if (options.verbose) {
+          console.log(chalk.gray('Verbose mode: enabled'));
+        }
         console.log();
       }
 
       const result = runner.run();
+
+      // Handle auto-add before output (works for both JSON and non-JSON)
+      if (options.autoAdd && result.failingTests.length > 0) {
+        const priority = parseInt(options.priority, 10);
+        
+        result.failingTests.forEach(test => {
+          const absolutePath = path.resolve(test);
+          // Pass stderr as error context for Claude
+          queue.enqueue(absolutePath, priority, result.stderr || result.stdout);
+        });
+      }
 
       if (useJsonOutput(options)) {
         console.log(JSON.stringify({
@@ -567,7 +591,13 @@ program
           language: result.language,
           framework: result.framework,
           command: result.command,
-          error: result.error
+          error: result.error,
+          // Include auto-add info in JSON output
+          ...(options.autoAdd && result.failingTests.length > 0 && {
+            autoAdded: true,
+            testsAdded: result.failingTests.length,
+            priority: parseInt(options.priority, 10)
+          })
         }));
       } else {
         if (result.success) {
@@ -584,13 +614,6 @@ program
             if (options.autoAdd) {
               const priority = parseInt(options.priority, 10);
               console.log(chalk.blue('\nAdding failures to queue...'));
-              
-              result.failingTests.forEach(test => {
-                const absolutePath = path.resolve(test);
-                // Pass stderr as error context for Claude
-                queue.enqueue(absolutePath, priority, result.stderr || result.stdout);
-              });
-              
               console.log(chalk.green('✓'), `Added ${result.failingTests.length} test(s) to queue`);
               if (priority > 0) {
                 console.log(chalk.yellow(`  Priority: ${priority}`));
@@ -896,6 +919,87 @@ program
   });
 
 // fix-tests command removed - Claude provider no longer supported
+
+program
+  .command('init')
+  .description('Initialize TFQ for current project')
+  .option('--db-path <path>', 'Custom database path (default: ./.tfq/queue.db)')
+  .option('--interactive', 'Interactive setup mode')
+  .option('--ci', 'Initialize for CI environment')
+  .option('--shared', 'Create shared team configuration')
+  .option('--no-gitignore', 'Skip .gitignore modification')
+  .option('--workspace-mode', 'Initialize for monorepo with workspaces')
+  .option('--scope <path>', 'Initialize for specific monorepo sub-project')
+  .option('--json', 'Output result as JSON')
+  .action(async (options) => {
+    try {
+      const { InitService } = await import('./core/init-service.js');
+      const service = new InitService();
+      
+      let config;
+      
+      if (options.interactive) {
+        // Interactive mode
+        const { interactiveInit } = await import('./cli/interactive-init.js');
+        config = await interactiveInit(service, options);
+      } else {
+        // Direct initialization
+        config = await service.initialize(options);
+      }
+      
+      // Save the configuration
+      const targetPath = options.scope 
+        ? path.join(path.resolve(options.scope), '.tfqrc')
+        : path.join(process.cwd(), '.tfqrc');
+      
+      await service.saveConfig(config, targetPath);
+      
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({
+          success: true,
+          configPath: targetPath,
+          config
+        }, null, 2));
+      } else {
+        console.log(chalk.green('✓'), 'TFQ initialized successfully!');
+        console.log();
+        console.log('Configuration saved to:', chalk.cyan(targetPath));
+        console.log();
+        console.log('Detected:');
+        if (config.language) {
+          console.log('  Language:', chalk.yellow(config.language));
+        }
+        if (config.framework) {
+          console.log('  Framework:', chalk.yellow(config.framework));
+        }
+        console.log('  Database:', chalk.cyan(config.database?.path || './.tfq/queue.db'));
+        
+        if (config.workspaces) {
+          console.log();
+          console.log('Workspaces configured:');
+          for (const [workspace, dbPath] of Object.entries(config.workspaces)) {
+            console.log(`  ${chalk.blue(workspace)}: ${chalk.cyan(dbPath)}`);
+          }
+        }
+        
+        console.log();
+        console.log('Next steps:');
+        console.log('  1. Run your tests:', chalk.cyan('tfq run-tests --auto-detect --auto-add'));
+        console.log('  2. View queued failures:', chalk.cyan('tfq list'));
+        console.log('  3. Get next test to fix:', chalk.cyan('tfq next'));
+      }
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({
+          success: false,
+          error: error.message
+        }, null, 2));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
 
 program
   .command('config')
