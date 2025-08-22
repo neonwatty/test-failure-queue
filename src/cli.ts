@@ -565,6 +565,17 @@ program
 
       const result = runner.run();
 
+      // Handle auto-add before output (works for both JSON and non-JSON)
+      if (options.autoAdd && result.failingTests.length > 0) {
+        const priority = parseInt(options.priority, 10);
+        
+        result.failingTests.forEach(test => {
+          const absolutePath = path.resolve(test);
+          // Pass stderr as error context for Claude
+          queue.enqueue(absolutePath, priority, result.stderr || result.stdout);
+        });
+      }
+
       if (useJsonOutput(options)) {
         console.log(JSON.stringify({
           success: result.success,
@@ -575,7 +586,13 @@ program
           language: result.language,
           framework: result.framework,
           command: result.command,
-          error: result.error
+          error: result.error,
+          // Include auto-add info in JSON output
+          ...(options.autoAdd && result.failingTests.length > 0 && {
+            autoAdded: true,
+            testsAdded: result.failingTests.length,
+            priority: parseInt(options.priority, 10)
+          })
         }));
       } else {
         if (result.success) {
@@ -592,13 +609,6 @@ program
             if (options.autoAdd) {
               const priority = parseInt(options.priority, 10);
               console.log(chalk.blue('\nAdding failures to queue...'));
-              
-              result.failingTests.forEach(test => {
-                const absolutePath = path.resolve(test);
-                // Pass stderr as error context for Claude
-                queue.enqueue(absolutePath, priority, result.stderr || result.stdout);
-              });
-              
               console.log(chalk.green('✓'), `Added ${result.failingTests.length} test(s) to queue`);
               if (priority > 0) {
                 console.log(chalk.yellow(`  Priority: ${priority}`));
