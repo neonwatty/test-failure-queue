@@ -11,6 +11,14 @@ import { adapterRegistry } from './adapters/registry.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Get package.json to read version
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 
 const program = new Command();
 let config: ConfigFile = {};
@@ -40,7 +48,7 @@ function formatItemJson(item: QueueItem): object {
 program
   .name('tfq')
   .description('Test Failure Queue - Manage failed test files')
-  .version('1.0.0')
+  .version(packageJson.version)
   .option('--config <path>', 'Path to custom config file')
   .hook('preAction', (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
