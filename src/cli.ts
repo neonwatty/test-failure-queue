@@ -441,6 +441,7 @@ program
   .option('--list-frameworks', 'List available frameworks for the language')
   .option('--auto-add', 'Automatically add failing tests to queue')
   .option('-p, --priority <number>', 'Priority for auto-added tests', '0')
+  .option('-v, --verbose', 'Show test output in real-time')
   .option('--skip-unsupported-check', 'Skip checking for unsupported frameworks (not recommended)')
   .option('--json', 'Output in JSON format')
   .action((command: string | undefined, options) => {
@@ -550,7 +551,8 @@ program
         command: testCommand,
         language: language as TestLanguage,
         framework: framework as TestFramework,
-        skipUnsupportedCheck: options.skipUnsupportedCheck
+        skipUnsupportedCheck: options.skipUnsupportedCheck,
+        verbose: options.verbose && !useJsonOutput(options)  // Disable verbose in JSON mode
       });
 
       if (!useJsonOutput(options)) {
@@ -559,6 +561,9 @@ program
         console.log(chalk.gray(`Framework: ${framework}`));
         if (testCommand) {
           console.log(chalk.gray(`Command: ${testCommand}`));
+        }
+        if (options.verbose) {
+          console.log(chalk.gray('Verbose mode: enabled'));
         }
         console.log();
       }

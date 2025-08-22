@@ -222,6 +222,28 @@ describe('CLI Commands', () => {
       });
     });
 
+    describe('verbose mode', () => {
+      it('should accept --verbose flag', async () => {
+        const result = await runCLI(['run-tests', 'echo "test output"', '--verbose']);
+        expect(result.stdout).toContain('Verbose mode: enabled');
+        expect(result.stdout).toContain('test output');
+      });
+
+      it('should accept -v shorthand for verbose', async () => {
+        const result = await runCLI(['run-tests', 'echo "test"', '-v']);
+        expect(result.stdout).toContain('Verbose mode: enabled');
+      });
+
+      it('should disable verbose mode when using --json output', async () => {
+        const result = await runCLI(['run-tests', 'echo "test"', '--verbose', '--json']);
+        const jsonLine = result.stdout.split('\n').find(line => line.trim().startsWith('{'));
+        const output = JSON.parse(jsonLine!);
+        expect(output.success).toBe(true);
+        // Should not contain test output text in stdout when JSON mode is active
+        expect(result.stdout.split('\n')[0]).not.toContain('test output');
+      });
+    });
+
     describe('backward compatibility', () => {
       it('should default to JavaScript when no language is specified', async () => {
         const result = await runCLI(['run-tests', '--framework', 'jest', 'echo "test"', '--json']);

@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { TestLanguage, TestFramework, TestRunResult, TestRunnerOptions } from './types.js';
@@ -11,9 +11,11 @@ export class TestRunner {
   private framework: TestFramework;
   private command: string;
   private adapter: LanguageAdapter;
+  private verbose: boolean;
 
   constructor(options: TestRunnerOptions = {}) {
     const config = ConfigManager.getInstance();
+    this.verbose = options.verbose || false;
     
     // Check for unsupported frameworks first
     const unsupportedFrameworks = TestRunner.detectUnsupportedFrameworks();
@@ -61,6 +63,14 @@ export class TestRunner {
   }
 
   run(): TestRunResult {
+    if (this.verbose) {
+      // For verbose mode, we need to use synchronous execution with real-time output
+      return this.runVerbose();
+    }
+    return this.runSilent();
+  }
+
+  private runSilent(): TestRunResult {
     const startTime = Date.now();
     let stdout = '';
     let stderr = '';
@@ -78,6 +88,60 @@ export class TestRunner {
       stdout = err.stdout || '';
       stderr = err.stderr || '';
       error = err;
+    }
+
+    const duration = Date.now() - startTime;
+    const fullOutput = stdout + stderr;
+    const failingTests = this.extractFailingTests(fullOutput);
+
+    return {
+      success: exitCode === 0,
+      exitCode,
+      failingTests,
+      totalFailures: failingTests.length,
+      duration,
+      language: this.language,
+      framework: this.framework,
+      command: this.command,
+      stdout,
+      stderr,
+      error: error?.message || null
+    };
+  }
+
+  private runVerbose(): TestRunResult {
+    const startTime = Date.now();
+    let stdout = '';
+    let stderr = '';
+    let exitCode = 0;
+    let error: Error | null = null;
+
+    // Parse the command to handle shell commands properly
+    const shell = process.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
+    const shellFlag = process.platform === 'win32' ? '/c' : '-c';
+    
+    // Use spawnSync with pipe to capture output while writing to console in real-time
+    const result = spawnSync(shell, [shellFlag, this.command], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+      maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large outputs
+      env: { ...process.env }
+    });
+
+    exitCode = result.status || 0;
+    stdout = result.stdout || '';
+    stderr = result.stderr || '';
+    
+    // Print output to console for verbose mode
+    if (stdout) {
+      process.stdout.write(stdout);
+    }
+    if (stderr) {
+      process.stderr.write(stderr);
+    }
+
+    if (result.error) {
+      error = result.error;
     }
 
     const duration = Date.now() - startTime;

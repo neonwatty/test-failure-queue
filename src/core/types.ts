@@ -54,6 +54,7 @@ export interface TestRunnerOptions {
   command?: string;
   autoDetect?: boolean;
   skipUnsupportedCheck?: boolean;
+  verbose?: boolean;
 }
 
 export interface TestRunResult {
