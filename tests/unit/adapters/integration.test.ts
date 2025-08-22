@@ -119,7 +119,7 @@ describe('Multi-Language Adapter Integration Tests', () => {
       setupMockProject(tempDir, 'mixedLanguage');
       
       const detectedLanguage = adapterRegistry.detectLanguage(tempDir);
-      expect(detectedLanguage).toBe('javascript'); // Should detect root package.json
+      expect(detectedLanguage).toBe('ruby'); // Should detect Gemfile first (language-specific files have priority)
     });
 
     it('should return null for project without test framework', () => {

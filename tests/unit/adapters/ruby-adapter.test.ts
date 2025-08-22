@@ -25,12 +25,56 @@ describe('RubyAdapter', () => {
   });
   
   describe('detectFramework', () => {
+    it('should detect rspec when Gemfile contains rspec', async () => {
+      mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
+        const pathStr = path.toString();
+        return pathStr.endsWith('Gemfile');
+      });
+      mockFs.readFileSync.mockReturnValue('gem "rspec"\ngem "rspec-rails"');
+      
+      const result = await adapter.detectFramework('/test/path');
+      expect(result).toBe('rspec');
+    });
+    
+    it('should detect rspec when spec directory exists', async () => {
+      mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
+        const pathStr = path.toString();
+        return pathStr.endsWith('/spec');
+      });
+      mockFs.readFileSync.mockReturnValue('');
+      
+      const result = await adapter.detectFramework('/test/path');
+      expect(result).toBe('rspec');
+    });
+    
+    it('should detect rspec when .rspec file exists', async () => {
+      mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
+        const pathStr = path.toString();
+        return pathStr.endsWith('.rspec');
+      });
+      mockFs.readFileSync.mockReturnValue('');
+      
+      const result = await adapter.detectFramework('/test/path');
+      expect(result).toBe('rspec');
+    });
+    
     it('should detect minitest for Rails projects', async () => {
       mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
         const pathStr = path.toString();
         return pathStr.endsWith('Gemfile') || pathStr.endsWith('config/application.rb');
       });
       mockFs.readFileSync.mockReturnValue('gem "rails"\ngem "minitest"');
+      
+      const result = await adapter.detectFramework('/test/path');
+      expect(result).toBe('minitest');
+    });
+    
+    it('should detect minitest when Gemfile contains minitest', async () => {
+      mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
+        const pathStr = path.toString();
+        return pathStr.endsWith('Gemfile');
+      });
+      mockFs.readFileSync.mockReturnValue('gem "minitest"\ngem "minitest-reporters"');
       
       const result = await adapter.detectFramework('/test/path');
       expect(result).toBe('minitest');
@@ -56,7 +100,15 @@ describe('RubyAdapter', () => {
   });
   
   describe('getTestCommand', () => {
-    it('should return rails test for minitest', () => {
+    it('should return rspec for rspec framework', () => {
+      expect(adapter.getTestCommand('rspec')).toBe('rspec');
+    });
+    
+    it('should return rspec with path for rspec framework', () => {
+      expect(adapter.getTestCommand('rspec', 'spec/models/user_spec.rb')).toBe('rspec spec/models/user_spec.rb');
+    });
+    
+    it('should return rails test for minitest in Rails project', () => {
       // Mock Rails detection
       mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
         const pathStr = path.toString();
@@ -65,13 +117,25 @@ describe('RubyAdapter', () => {
       expect(adapter.getTestCommand('minitest')).toBe('rails test');
     });
     
-    it('should return rails test with path for minitest', () => {
+    it('should return rails test with path for minitest in Rails project', () => {
       // Mock Rails detection
       mockFs.existsSync.mockImplementation((path: fs.PathLike) => {
         const pathStr = path.toString();
         return pathStr.endsWith('config/application.rb') || pathStr.endsWith('bin/rails');
       });
       expect(adapter.getTestCommand('minitest', 'test/models/user_test.rb')).toBe('rails test test/models/user_test.rb');
+    });
+    
+    it('should return ruby command for minitest in non-Rails project', () => {
+      // Mock non-Rails project
+      mockFs.existsSync.mockReturnValue(false);
+      expect(adapter.getTestCommand('minitest')).toBe(`ruby -Ilib:test -e "Dir.glob('test/**/*_test.rb').each { |file| require File.expand_path(file) }"`);
+    });
+    
+    it('should return ruby command with path for minitest in non-Rails project', () => {
+      // Mock non-Rails project
+      mockFs.existsSync.mockReturnValue(false);
+      expect(adapter.getTestCommand('minitest', 'test/calculator_test.rb')).toBe('ruby -Ilib:test test/calculator_test.rb');
     });
     
     it('should handle unknown framework', () => {

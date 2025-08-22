@@ -131,7 +131,87 @@ describe('ConfigManager', () => {
 
   });
 
-  describe('Existing functionality', () => {
+  describe('TfqConfig format compatibility', () => {
+    it('should load language from TfqConfig format (init output)', () => {
+      const tfqConfig = {
+        language: 'ruby',
+        framework: 'minitest',
+        database: {
+          path: './.tfq/queue.db'
+        },
+        defaults: {
+          autoAdd: true,
+          parallel: 4
+        }
+      };
+      fs.writeFileSync(configPath, JSON.stringify(tfqConfig));
+      
+      const manager = new ConfigManager(configPath);
+      expect(manager.getDefaultLanguage()).toBe('ruby');
+      expect(manager.getDefaultFramework('ruby' as TestLanguage)).toBe('minitest');
+    });
+
+    it('should load database path from TfqConfig format', () => {
+      const tfqConfig = {
+        language: 'python',
+        framework: 'pytest',
+        database: {
+          path: './.tfq/custom.db'
+        }
+      };
+      fs.writeFileSync(configPath, JSON.stringify(tfqConfig));
+      
+      const manager = new ConfigManager(configPath);
+      const config = manager.getConfig();
+      // Relative paths are resolved to absolute paths
+      expect(config.databasePath).toContain('.tfq/custom.db');
+      expect(path.isAbsolute(config.databasePath)).toBe(true);
+    });
+
+    it('should handle mixed TfqConfig and ConfigFile properties', () => {
+      const mixedConfig = {
+        // TfqConfig format
+        language: 'javascript',
+        framework: 'vitest',
+        database: {
+          path: './.tfq/queue.db'
+        },
+        // ConfigFile format
+        verbose: true,
+        jsonOutput: true
+      };
+      fs.writeFileSync(configPath, JSON.stringify(mixedConfig));
+      
+      const manager = new ConfigManager(configPath);
+      expect(manager.getDefaultLanguage()).toBe('javascript');
+      expect(manager.getDefaultFramework('javascript' as TestLanguage)).toBe('vitest');
+      
+      const config = manager.getConfig();
+      expect(config.verbose).toBe(true);
+      expect(config.jsonOutput).toBe(true);
+    });
+
+
+    it('should handle defaults from TfqConfig format', () => {
+      const tfqConfig = {
+        language: 'ruby',
+        defaults: {
+          autoAdd: true,
+          parallel: 8
+        }
+      };
+      fs.writeFileSync(configPath, JSON.stringify(tfqConfig));
+      
+      const manager = new ConfigManager(configPath);
+      const config = manager.getConfig();
+      // autoAdd maps to autoCleanup
+      expect(config.autoCleanup).toBe(true);
+      // parallel maps to defaultPriority
+      expect(config.defaultPriority).toBe(8);
+    });
+  });
+
+  describe('Core configuration functionality', () => {
     it('should load config from file', () => {
       const config = {
         databasePath: '~/custom/path.db',

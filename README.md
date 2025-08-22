@@ -135,9 +135,9 @@ src/api/auth.test.js [P5]
 - **Multiple Test Frameworks**: 
   - JavaScript: Jest, Mocha, Vitest, Jasmine, AVA
   - Python: pytest, unittest
-  - Ruby: Minitest
-- **Auto-Detection**: Automatically detects language and test framework
-- **Persistent Storage**: Uses SQLite to maintain test failure history across sessions
+  - Ruby: Minitest, RSpec
+- **Auto-Detection**: Automatically detects language and test framework with improved error messages
+- **Persistent Storage**: SQLite with WAL mode for better concurrent access
 - **Priority Management**: Assign priorities to different test files
 - **Pattern Matching**: Support for glob patterns to manage multiple files at once
 - **Failure Tracking**: Automatically tracks failure counts and timestamps
@@ -145,6 +145,7 @@ src/api/auth.test.js [P5]
 - **Cross-Project Support**: Manage test queues for multiple projects
 - **Intelligent Test Grouping**: Organize tests for parallel or sequential execution
 - **Execution Optimization**: Run independent tests in parallel for 40-60% faster execution
+- **Config Validation**: Validates configuration before saving to prevent errors
 - **Claude Code Integration**: Works seamlessly with Claude Code for AI-powered test fixing (see CLAUDE.md)
 
 ## Installation

@@ -21,6 +21,12 @@ export class TestDatabase {
       verbose: config.verbose ? console.log : undefined 
     });
 
+    // Set busy timeout FIRST to handle concurrent access during initialization
+    this.db.pragma('busy_timeout = 5000');
+    
+    // Enable WAL mode for better concurrency (allows multiple readers + one writer)
+    this.db.pragma('journal_mode = WAL');
+
     this.initialize();
   }
 
