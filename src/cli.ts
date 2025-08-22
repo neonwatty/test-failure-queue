@@ -921,6 +921,87 @@ program
 // fix-tests command removed - Claude provider no longer supported
 
 program
+  .command('init')
+  .description('Initialize TFQ for current project')
+  .option('--db-path <path>', 'Custom database path (default: ./.tfq/queue.db)')
+  .option('--interactive', 'Interactive setup mode')
+  .option('--ci', 'Initialize for CI environment')
+  .option('--shared', 'Create shared team configuration')
+  .option('--no-gitignore', 'Skip .gitignore modification')
+  .option('--workspace-mode', 'Initialize for monorepo with workspaces')
+  .option('--scope <path>', 'Initialize for specific monorepo sub-project')
+  .option('--json', 'Output result as JSON')
+  .action(async (options) => {
+    try {
+      const { InitService } = await import('./core/init-service.js');
+      const service = new InitService();
+      
+      let config;
+      
+      if (options.interactive) {
+        // Interactive mode
+        const { interactiveInit } = await import('./cli/interactive-init.js');
+        config = await interactiveInit(service, options);
+      } else {
+        // Direct initialization
+        config = await service.initialize(options);
+      }
+      
+      // Save the configuration
+      const targetPath = options.scope 
+        ? path.join(path.resolve(options.scope), '.tfqrc')
+        : path.join(process.cwd(), '.tfqrc');
+      
+      await service.saveConfig(config, targetPath);
+      
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({
+          success: true,
+          configPath: targetPath,
+          config
+        }, null, 2));
+      } else {
+        console.log(chalk.green('✓'), 'TFQ initialized successfully!');
+        console.log();
+        console.log('Configuration saved to:', chalk.cyan(targetPath));
+        console.log();
+        console.log('Detected:');
+        if (config.language) {
+          console.log('  Language:', chalk.yellow(config.language));
+        }
+        if (config.framework) {
+          console.log('  Framework:', chalk.yellow(config.framework));
+        }
+        console.log('  Database:', chalk.cyan(config.database?.path || './.tfq/queue.db'));
+        
+        if (config.workspaces) {
+          console.log();
+          console.log('Workspaces configured:');
+          for (const [workspace, dbPath] of Object.entries(config.workspaces)) {
+            console.log(`  ${chalk.blue(workspace)}: ${chalk.cyan(dbPath)}`);
+          }
+        }
+        
+        console.log();
+        console.log('Next steps:');
+        console.log('  1. Run your tests:', chalk.cyan('tfq run-tests --auto-detect --auto-add'));
+        console.log('  2. View queued failures:', chalk.cyan('tfq list'));
+        console.log('  3. Get next test to fix:', chalk.cyan('tfq next'));
+      }
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({
+          success: false,
+          error: error.message
+        }, null, 2));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
   .command('config')
   .description('Manage configuration')
   .option('--init', 'Create default config file')
