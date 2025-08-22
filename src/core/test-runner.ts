@@ -14,7 +14,7 @@ export class TestRunner {
   private verbose: boolean;
 
   constructor(options: TestRunnerOptions = {}) {
-    const config = ConfigManager.getInstance();
+    const config = ConfigManager.getInstance(options.configPath);
     this.verbose = options.verbose || false;
     
     // Check for unsupported frameworks first
@@ -32,7 +32,11 @@ export class TestRunner {
     if (options.autoDetect) {
       const detectedLanguage = adapterRegistry.detectLanguage();
       if (!detectedLanguage) {
-        throw new Error('Could not auto-detect project language. Please specify --language explicitly.');
+        const hints = adapterRegistry.getDetectionHints();
+        throw new Error(
+          `Could not auto-detect project language. Checked for:\n  - ${hints.join('\n  - ')}\n\n` +
+          `Please specify --language explicitly or ensure your project has one of these indicators.`
+        );
       }
       this.language = detectedLanguage;
       this.adapter = adapterRegistry.get(this.language);

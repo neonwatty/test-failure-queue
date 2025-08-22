@@ -72,6 +72,7 @@ export interface TestRunnerOptions {
   autoDetect?: boolean;
   skipUnsupportedCheck?: boolean;
   verbose?: boolean;
+  configPath?: string;  // Path to config file to use
 }
 
 export interface TestRunResult {

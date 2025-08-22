@@ -273,5 +273,52 @@ describe('CLI init command', () => {
       const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
       expect(config.framework).toBe('rspec');
     });
+
+    it('should detect Minitest for Ruby', () => {
+      fs.writeFileSync(path.join(tempDir, 'Gemfile'), 'gem "minitest"\n');
+      fs.mkdirSync(path.join(tempDir, 'test'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'test/test_helper.rb'), 'require "minitest/autorun"\n');
+      
+      runCommand();
+      
+      const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
+      expect(config.framework).toBe('minitest');
+    });
+
+    it('should detect Minitest for Rails projects', () => {
+      fs.writeFileSync(path.join(tempDir, 'Gemfile'), 'gem "rails"\ngem "minitest"\n');
+      fs.mkdirSync(path.join(tempDir, 'config'), { recursive: true });
+      fs.writeFileSync(path.join(tempDir, 'config/application.rb'), 'module MyApp\nend\n');
+      
+      runCommand();
+      
+      const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
+      expect(config.framework).toBe('minitest');
+    });
+  });
+
+  describe('Language priority detection', () => {
+    it('should prefer Ruby over JavaScript when both Gemfile and package.json exist', () => {
+      // Create both Gemfile and package.json
+      fs.writeFileSync(path.join(tempDir, 'Gemfile'), 'source "https://rubygems.org"\ngem "rspec"\n');
+      fs.writeFileSync(path.join(tempDir, 'package.json'), '{"name": "frontend", "version": "1.0.0"}\n');
+      
+      runCommand();
+      
+      const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
+      expect(config.language).toBe('ruby');
+      expect(config.framework).toBe('rspec');
+    });
+
+    it('should prefer Python over JavaScript when both requirements.txt and package.json exist', () => {
+      // Create both requirements.txt and package.json
+      fs.writeFileSync(path.join(tempDir, 'requirements.txt'), 'pytest==7.4.0\n');
+      fs.writeFileSync(path.join(tempDir, 'package.json'), '{"name": "frontend", "version": "1.0.0"}\n');
+      
+      runCommand();
+      
+      const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
+      expect(config.language).toBe('python');
+    });
   });
 });

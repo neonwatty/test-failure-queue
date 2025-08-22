@@ -218,6 +218,6 @@ export const expectedDetections = {
   rubyRails: { language: 'ruby', framework: 'minitest' },
   pythonPytest: { language: 'python', framework: 'pytest' },
   pythonUnittest: { language: 'python', framework: 'unittest' },
-  mixedLanguage: { language: 'javascript', framework: 'jest' }, // Should detect root package.json first
+  mixedLanguage: { language: 'ruby', framework: 'minitest' }, // Should detect Gemfile first (language-specific priority)
   noTestFramework: { language: null, framework: null }
 };

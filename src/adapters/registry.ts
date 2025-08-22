@@ -56,11 +56,14 @@ export class TestAdapterRegistry implements AdapterRegistry {
 
   detectLanguage(projectPath: string = process.cwd()): TestLanguage | null {
     const detectionStrategies: Array<() => TestLanguage | null> = [
-      () => this.detectFromPackageJson(projectPath),
+      // Check for language-specific config files first (more specific)
       () => this.detectFromGemfile(projectPath),
       () => this.detectFromPythonFiles(projectPath),
       () => this.detectFromGoMod(projectPath),
       () => this.detectFromPomXml(projectPath),
+      // Check package.json after language-specific files (less specific)
+      () => this.detectFromPackageJson(projectPath),
+      // Fall back to file extensions
       () => this.detectFromFileExtensions(projectPath)
     ];
 
@@ -72,6 +75,17 @@ export class TestAdapterRegistry implements AdapterRegistry {
     }
 
     return null;
+  }
+
+  getDetectionHints(): string[] {
+    return [
+      'Gemfile or Gemfile.lock (Ruby)',
+      'requirements.txt, setup.py, or pyproject.toml (Python)', 
+      'go.mod (Go)',
+      'pom.xml (Java)',
+      'package.json (JavaScript/TypeScript)',
+      'File extensions (.rb, .py, .go, .java, .js, .ts)'
+    ];
   }
 
   private detectFromPackageJson(projectPath: string): TestLanguage | null {

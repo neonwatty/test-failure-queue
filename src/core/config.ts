@@ -46,10 +46,56 @@ export class ConfigManager {
     return paths;
   }
 
-  private mergeConfig(base: ConfigFile, override: ConfigFile): ConfigFile {
-    const merged = { ...base, ...override };
-    this.validateConfig(merged);
-    return merged;
+  private mergeConfig(base: ConfigFile, override: any): ConfigFile {
+    // Handle TfqConfig format (from init)
+    let configFile: ConfigFile = { ...base };
+    
+    // Convert TfqConfig properties to ConfigFile format if present
+    if (override.language) {
+      configFile.defaultLanguage = override.language as TestLanguage;
+    }
+    
+    if (override.framework && override.language) {
+      configFile.defaultFrameworks = {
+        ...configFile.defaultFrameworks,
+        [override.language as TestLanguage]: override.framework
+      } as Record<TestLanguage, TestFramework>;
+    }
+    
+    // Handle database path from TfqConfig format
+    if (override.database?.path) {
+      configFile.databasePath = override.database.path;
+    }
+    
+    // Handle defaults from TfqConfig format
+    if (override.defaults) {
+      if (override.defaults.autoAdd !== undefined) {
+        configFile.autoCleanup = override.defaults.autoAdd;
+      }
+      if (override.defaults.parallel !== undefined) {
+        configFile.defaultPriority = override.defaults.parallel;
+      }
+    }
+    
+    // Also support direct ConfigFile properties for manual configs
+    const merged = { ...configFile, ...override };
+    
+    // Keep only ConfigFile properties
+    const finalConfig: ConfigFile = {
+      databasePath: merged.databasePath || configFile.databasePath,
+      defaultPriority: merged.defaultPriority || configFile.defaultPriority,
+      autoCleanup: merged.autoCleanup || configFile.autoCleanup,
+      maxRetries: merged.maxRetries || configFile.maxRetries,
+      verbose: merged.verbose || configFile.verbose,
+      jsonOutput: merged.jsonOutput || configFile.jsonOutput,
+      colorOutput: merged.colorOutput || configFile.colorOutput,
+      defaultLanguage: merged.defaultLanguage || configFile.defaultLanguage,
+      defaultFrameworks: merged.defaultFrameworks || configFile.defaultFrameworks,
+      testCommands: merged.testCommands || configFile.testCommands
+    };
+    
+    this.validateConfig(finalConfig);
+    return finalConfig;
   }
 
   private validateConfig(config: ConfigFile): void {
@@ -91,6 +137,10 @@ export class ConfigManager {
   private expandPath(filePath: string): string {
     if (filePath.startsWith('~/')) {
       return path.join(os.homedir(), filePath.slice(2));
+    }
+    // If path is relative, resolve it relative to current working directory
+    if (!path.isAbsolute(filePath)) {
+      return path.resolve(process.cwd(), filePath);
     }
     return filePath;
   }
@@ -161,28 +211,10 @@ export class ConfigManager {
   writeConfig(config: TfqConfig, targetPath?: string): void {
     const configPath = targetPath || path.join(process.cwd(), '.tfqrc');
     
-    // Convert TfqConfig to ConfigFile format
-    const configFile: ConfigFile = {};
-    
-    if (config.database?.path) {
-      configFile.databasePath = config.database.path;
-    }
-    
-    if (config.language) {
-      configFile.defaultLanguage = config.language as TestLanguage;
-    }
-    
-    if (config.framework && config.language) {
-      configFile.defaultFrameworks = {
-        ...configFile.defaultFrameworks,
-        [config.language as TestLanguage]: config.framework
-      } as Record<TestLanguage, TestFramework>;
-    }
-    
-    if (config.defaults) {
-      if (config.defaults.autoAdd !== undefined) {
-        configFile.autoCleanup = config.defaults.autoAdd;
-      }
+    // Validate config before writing
+    const validationError = this.validateTfqConfig(config);
+    if (validationError) {
+      throw new Error(`Invalid configuration: ${validationError}`);
     }
     
     // Create directory if it doesn't exist
@@ -196,6 +228,63 @@ export class ConfigManager {
       JSON.stringify(config, null, 2),
       'utf-8'
     );
+  }
+
+  validateTfqConfig(config: TfqConfig): string | null {
+    const registry = TestAdapterRegistry.getInstance();
+    
+    // Validate language if specified
+    if (config.language) {
+      const supportedLanguages = registry.list().map((info: any) => info.language);
+      if (!supportedLanguages.includes(config.language)) {
+        return `Unsupported language '${config.language}'. Supported: ${supportedLanguages.join(', ')}`;
+      }
+      
+      // Validate framework for the language if specified
+      if (config.framework) {
+        const frameworks = registry.getFrameworksForLanguage(config.language as TestLanguage);
+        if (!frameworks.includes(config.framework)) {
+          return `Unsupported framework '${config.framework}' for ${config.language}. Supported: ${frameworks.join(', ')}`;
+        }
+      }
+    }
+    
+    // Validate database path if specified
+    if (config.database?.path) {
+      const dbPath = this.expandPath(config.database.path);
+      const dbDir = path.dirname(dbPath);
+      
+      // Check if parent directory is writable (or can be created)
+      try {
+        // Walk up the path to find the first existing parent
+        let checkPath = dbDir;
+        let pathsToCheck = [];
+        
+        while (!fs.existsSync(checkPath) && checkPath !== path.dirname(checkPath)) {
+          pathsToCheck.push(checkPath);
+          checkPath = path.dirname(checkPath);
+        }
+        
+        // Now checkPath exists (or we hit root)
+        if (fs.existsSync(checkPath)) {
+          const stat = fs.statSync(checkPath);
+          if (!stat.isDirectory()) {
+            return `Database path parent '${checkPath}' is not a directory`;
+          }
+          
+          // Check write permission
+          try {
+            fs.accessSync(checkPath, fs.constants.W_OK);
+          } catch {
+            return `No write permission for database path '${checkPath}'`;
+          }
+        }
+      } catch (error: any) {
+        return `Cannot validate database path: ${error.message}`;
+      }
+    }
+    
+    return null; // No errors
   }
 
   mergeConfigs(base: TfqConfig, override: TfqConfig): TfqConfig {

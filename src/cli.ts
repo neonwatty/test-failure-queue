@@ -466,13 +466,16 @@ program
         if (options.autoDetect && !language) {
           language = adapterRegistry.detectLanguage();
           if (!language) {
+            const hints = adapterRegistry.getDetectionHints();
+            const errorMsg = `Could not detect language from project. Checked for:\n  - ${hints.join('\n  - ')}\n\nUse --language to specify explicitly.`;
+            
             if (useJsonOutput(options)) {
               console.log(JSON.stringify({ 
                 success: false, 
-                error: 'Could not detect language from project' 
+                error: errorMsg 
               }));
             } else {
-              console.error(chalk.red('Error:'), 'Could not detect language from project');
+              console.error(chalk.red('Error:'), errorMsg);
             }
             process.exit(1);
           }
@@ -498,7 +501,11 @@ program
         if (!language) {
           language = adapterRegistry.detectLanguage();
           if (!language) {
-            // Default to JavaScript for backward compatibility
+            // Default to JavaScript for backward compatibility, but warn
+            if (!useJsonOutput(options)) {
+              const hints = adapterRegistry.getDetectionHints();
+              console.warn(chalk.yellow('Warning:'), `Could not detect language. Checked for:\n  - ${hints.join('\n  - ')}\nDefaulting to JavaScript.`);
+            }
             language = 'javascript';
           }
         }
@@ -507,8 +514,14 @@ program
           framework = adapterRegistry.detectFramework(language);
         }
       } else if (!language) {
-        // Default to JavaScript for backward compatibility
-        language = 'javascript';
+        // Check config for default language
+        const configManager = ConfigManager.getInstance(program.opts().config);
+        language = configManager.getDefaultLanguage() || 'javascript';
+        
+        // If we got language from config, also get framework if not specified
+        if (!framework && language) {
+          framework = configManager.getDefaultFramework(language as TestLanguage) || null;
+        }
       }
       
       // Validate language
@@ -552,7 +565,8 @@ program
         language: language as TestLanguage,
         framework: framework as TestFramework,
         skipUnsupportedCheck: options.skipUnsupportedCheck,
-        verbose: options.verbose && !useJsonOutput(options)  // Disable verbose in JSON mode
+        verbose: options.verbose && !useJsonOutput(options),  // Disable verbose in JSON mode
+        configPath: program.opts().config  // Pass the config path from global options
       });
 
       if (!useJsonOutput(options)) {
@@ -952,7 +966,19 @@ program
         ? path.join(path.resolve(options.scope), '.tfqrc')
         : path.join(process.cwd(), '.tfqrc');
       
-      await service.saveConfig(config, targetPath);
+      try {
+        await service.saveConfig(config, targetPath);
+      } catch (error: any) {
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ 
+            success: false, 
+            error: error.message 
+          }));
+        } else {
+          console.error(chalk.red('Error:'), error.message);
+        }
+        process.exit(1);
+      }
       
       if (useJsonOutput(options)) {
         console.log(JSON.stringify({
