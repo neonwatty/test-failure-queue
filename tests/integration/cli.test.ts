@@ -324,6 +324,48 @@ describe('CLI Commands', () => {
     });
   });
 
+  describe('count command', () => {
+    it('should return 0 for empty queue', async () => {
+      const result = await runCLI(['count']);
+      
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toBe('0');
+    });
+
+    it('should return correct count after adding items', async () => {
+      // Add test files to queue
+      await runCLI(['add', 'test1.js']);
+      await runCLI(['add', 'test2.js']);
+      await runCLI(['add', 'test3.js']);
+      
+      const result = await runCLI(['count']);
+      
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toBe('3');
+    });
+
+    it('should support JSON output format', async () => {
+      await runCLI(['add', 'test1.js']);
+      await runCLI(['add', 'test2.js']);
+      
+      const result = await runCLI(['count', '--json']);
+      
+      expect(result.exitCode).toBe(0);
+      const json = JSON.parse(result.stdout);
+      expect(json.success).toBe(true);
+      expect(json.count).toBe(2);
+    });
+
+    it('should return 0 in JSON format for empty queue', async () => {
+      const result = await runCLI(['count', '--json']);
+      
+      expect(result.exitCode).toBe(0);
+      const json = JSON.parse(result.stdout);
+      expect(json.success).toBe(true);
+      expect(json.count).toBe(0);
+    });
+  });
+
   describe('help command', () => {
     it('should show updated help for run-tests', async () => {
       const result = await runCLI(['run-tests', '--help']);

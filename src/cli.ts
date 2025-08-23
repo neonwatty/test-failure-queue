@@ -433,6 +433,29 @@ program
   });
 
 program
+  .command('count')
+  .description('Get the number of items in the queue')
+  .option('--json', 'Output in JSON format', config.jsonOutput || false)
+  .action((options) => {
+    try {
+      const count = queue.size();
+      
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: true, count }));
+      } else {
+        console.log(count.toString());
+      }
+    } catch (error: any) {
+      if (useJsonOutput(options)) {
+        console.log(JSON.stringify({ success: false, error: error.message }));
+      } else {
+        console.error(chalk.red('Error:'), error.message);
+      }
+      process.exit(1);
+    }
+  });
+
+program
   .command('run-tests [command]')
   .description('Run tests and detect failures')
   .option('-l, --language <type>', 'Programming language: javascript|ruby|python')
