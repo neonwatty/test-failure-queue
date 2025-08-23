@@ -30,6 +30,7 @@ TFQ (Test Failure Queue) is a command-line tool designed to help developers effi
 | `tfq init` | Initialize TFQ for your project |
 | `tfq run-tests --auto-add` | Run tests and queue failures |
 | `tfq list` | View queued test failures |
+| `tfq count` | Get the number of items in queue |
 | `tfq stats` | Show queue statistics |
 | `tfq clear` | Clear the queue |
 | `tfq --help` | Show all commands |
@@ -281,6 +282,12 @@ tfq next --json
 tfq list
 tfq list --limit 5
 tfq list --json
+```
+
+#### Get queue count
+```bash
+tfq count         # Returns just the integer count
+tfq count --json  # Returns {success: true, count: N}
 ```
 
 #### Mark a test as resolved
