@@ -14,7 +14,7 @@ const execAsync = promisify(exec);
 
 describe('Process Cleanup Tests', () => {
   const cliPath = path.join(__dirname, '../..', 'src', 'cli.ts');
-  const testDbPath = path.join(os.tmpdir(), 'test-process-cleanup-queue.db');
+  const testDbPath = path.join(os.tmpdir(), 'test-process-cleanup-tfq.db');
   
   // Track active child processes for cleanup
   const activeProcesses = new Set<any>();

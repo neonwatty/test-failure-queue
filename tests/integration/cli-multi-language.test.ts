@@ -11,7 +11,7 @@ const __dirname = dirname(__filename);
 
 describe('CLI - Multi-Language Support (Integration)', () => {
   const cliPath = path.join(__dirname, '../..', 'src', 'cli.ts');
-  const testDbPath = path.join(os.tmpdir(), 'test-cli-multi-lang-queue.db');
+  const testDbPath = path.join(os.tmpdir(), 'test-cli-multi-lang-tfq.db');
   
   // Track active child processes for cleanup
   const activeProcesses = new Set<any>();

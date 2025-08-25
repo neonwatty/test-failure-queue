@@ -27,7 +27,7 @@ describe('Config Validation', () => {
         language: 'javascript',
         framework: 'jest',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       
@@ -41,7 +41,7 @@ describe('Config Validation', () => {
         language: 'invalid-lang' as any,
         framework: 'jest',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       
@@ -56,7 +56,7 @@ describe('Config Validation', () => {
         language: 'ruby',
         framework: 'jest', // Jest is not a Ruby framework
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       
@@ -70,7 +70,7 @@ describe('Config Validation', () => {
       const manager = new ConfigManager();
       const config: TfqConfig = {
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         },
         defaults: {
           autoAdd: true
@@ -83,7 +83,7 @@ describe('Config Validation', () => {
 
     it('should validate database path with non-existent parent directory', () => {
       const manager = new ConfigManager();
-      const nonExistentPath = path.join(tempDir, 'deep', 'nested', 'path', 'queue.db');
+      const nonExistentPath = path.join(tempDir, 'deep', 'nested', 'path', 'tfq.db');
       const config: TfqConfig = {
         language: 'javascript',
         database: {
@@ -105,7 +105,7 @@ describe('Config Validation', () => {
       const config: TfqConfig = {
         language: 'javascript',
         database: {
-          path: path.join(filePath, 'queue.db') // Parent is a file, not a directory
+          path: path.join(filePath, 'tfq.db') // Parent is a file, not a directory
         }
       };
       
@@ -124,7 +124,7 @@ describe('Config Validation', () => {
         language: 'python',
         framework: 'pytest',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       
@@ -144,7 +144,7 @@ describe('Config Validation', () => {
         language: 'invalid' as any,
         framework: 'test',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       
@@ -161,7 +161,7 @@ describe('Config Validation', () => {
         language: 'javascript',
         framework: 'invalid-framework',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       

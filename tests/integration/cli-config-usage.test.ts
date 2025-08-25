@@ -86,7 +86,7 @@ end
         language: 'ruby',
         framework: 'minitest',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       fs.writeFileSync(path.join(tempDir, '.tfqrc'), JSON.stringify(tfqrcConfig, null, 2));
@@ -108,7 +108,7 @@ end
         language: 'ruby',
         framework: 'minitest',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         }
       };
       fs.writeFileSync(path.join(tempDir, '.tfqrc'), JSON.stringify(tfqrcConfig, null, 2));
@@ -172,7 +172,7 @@ end
       const tfqrcConfig = {
         language: 'ruby',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         },
         defaults: {
           autoAdd: true,
@@ -198,7 +198,7 @@ end
 
   describe('next/peek commands', () => {
     it('should use database from .tfqrc', async () => {
-      const customDbPath = path.join(tempDir, '.custom', 'queue.db');
+      const customDbPath = path.join(tempDir, '.custom', 'tfq.db');
       const tfqrcConfig = {
         language: 'ruby',
         database: {
@@ -222,7 +222,7 @@ end
 
   describe('list command', () => {
     it('should use database from .tfqrc', async () => {
-      const customDbPath = path.join(tempDir, '.custom', 'queue.db');
+      const customDbPath = path.join(tempDir, '.custom', 'tfq.db');
       const tfqrcConfig = {
         language: 'ruby',
         database: {
@@ -265,7 +265,7 @@ end
           language: 'ruby',
           framework: 'minitest',
           database: {
-            path: './.tfq/queue.db'
+            path: './.tfq/tfq.db'
           }
         };
         fs.writeFileSync(path.join(tempDir, '.tfqrc'), JSON.stringify(localConfig, null, 2));

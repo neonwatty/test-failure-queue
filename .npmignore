@@ -70,7 +70,7 @@ Thumbs.db
 # Local databases and logs
 *.db
 *.log
-example-queue.db
+example-tfq.db
 example.js
 
 # Debug and test files at root

@@ -56,7 +56,7 @@ Configuration saved to: .tfqrc
 Detected:
   Language: javascript
   Framework: vitest
-  Database: ./.tfq/queue.db
+  Database: ./.tfq/tfq.db
 
 Next steps:
   1. Run your tests: tfq run-tests --auto-detect --auto-add
@@ -172,10 +172,10 @@ tfq init
 This command will:
 - Auto-detect your project's language and test framework
 - Create a `.tfqrc` configuration file
-- Set up a project-local database (`./.tfq/queue.db`)
+- Set up a project-local database (`./.tfq/tfq.db`)
 - Add `.tfq/` to your `.gitignore` (if in a git repository)
 
-**Note:** If you install TFQ globally, each project should run `tfq init` to create its own database. Without initialization, all projects would share the same global database at `~/.tfq/queue.db`.
+**Note:** If you install TFQ globally, each project should run `tfq init` to create its own database. Without initialization, all projects would share the same global database at `~/.tfq/tfq.db`.
 
 
 ## Supported Languages
@@ -228,7 +228,7 @@ tfq init --json
 ```
 
 The `init` command creates a `.tfqrc` configuration file with:
-- Project-specific database location (default: `./.tfq/queue.db`)
+- Project-specific database location (default: `./.tfq/tfq.db`)
 - Auto-detected language and test framework
 - Default settings for test execution
 
@@ -447,7 +447,7 @@ import { TestRunner } from 'tfq/core/test-runner';
 import { ConfigManager } from 'tfq/core/config';
 
 // Use core components directly
-const db = new TestDatabase('./custom-queue.db');
+const db = new TestDatabase('./custom-tfq.db');
 const runner = new TestRunner();
 const config = new ConfigManager();
 ```
@@ -466,12 +466,12 @@ These commands leverage Claude Code's Task agents and tools (Bash, Read, Edit) t
 ## Configuration
 
 The queue database is stored in your home directory by default:
-- Location: `~/.tfq/queue.db`
+- Location: `~/.tfq/tfq.db`
 
 You can also use a project-specific database by setting the `TFQ_DB_PATH` environment variable:
 
 ```bash
-export TFQ_DB_PATH=./my-project-queue.db
+export TFQ_DB_PATH=./my-project-tfq.db
 ```
 
 ## Use Cases

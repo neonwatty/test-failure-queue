@@ -137,7 +137,7 @@ describe('ConfigManager', () => {
         language: 'ruby',
         framework: 'minitest',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         },
         defaults: {
           autoAdd: true,
@@ -174,7 +174,7 @@ describe('ConfigManager', () => {
         language: 'javascript',
         framework: 'vitest',
         database: {
-          path: './.tfq/queue.db'
+          path: './.tfq/tfq.db'
         },
         // ConfigFile format
         verbose: true,
@@ -230,14 +230,14 @@ describe('ConfigManager', () => {
 
     it('should expand tilde in paths', () => {
       const config = {
-        databasePath: '~/test/queue.db'
+        databasePath: '~/test/tfq.db'
       };
       fs.writeFileSync(configPath, JSON.stringify(config));
       
       const manager = new ConfigManager(configPath);
       const loaded = manager.getConfig();
       
-      expect(loaded.databasePath).toBe(path.join(os.homedir(), 'test/queue.db'));
+      expect(loaded.databasePath).toBe(path.join(os.homedir(), 'test/tfq.db'));
     });
 
     it('should merge configs from multiple sources', () => {

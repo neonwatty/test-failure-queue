@@ -83,7 +83,7 @@ export class InitService {
 
     const config: TfqConfig = {
       database: {
-        path: dbPath || (ci ? '/tmp/tfq-queue.db' : './.tfq/queue.db')
+        path: dbPath || (ci ? '/tmp/tfq-tfq.db' : './.tfq/tfq.db')
       },
       defaults: {
         autoAdd: true,
@@ -106,7 +106,7 @@ export class InitService {
         config.workspaces = {};
         for (const workspace of workspaces) {
           const wsName = path.basename(workspace);
-          config.workspaces[workspace] = `./.tfq/${wsName}-queue.db`;
+          config.workspaces[workspace] = `./.tfq/${wsName}-tfq.db`;
         }
         config.workspaceDefaults = {
           autoAdd: true,
@@ -117,7 +117,7 @@ export class InitService {
 
     if (shared) {
       // For shared configs, use a non-gitignored path
-      config.database!.path = './.tfq/shared-queue.db';
+      config.database!.path = './.tfq/shared-tfq.db';
     }
 
     return config;

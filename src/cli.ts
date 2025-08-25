@@ -960,7 +960,7 @@ program
 program
   .command('init')
   .description('Initialize TFQ for current project')
-  .option('--db-path <path>', 'Custom database path (default: ./.tfq/queue.db)')
+  .option('--db-path <path>', 'Custom database path (default: ./.tfq/tfq.db)')
   .option('--interactive', 'Interactive setup mode')
   .option('--ci', 'Initialize for CI environment')
   .option('--shared', 'Create shared team configuration')
@@ -1021,7 +1021,7 @@ program
         if (config.framework) {
           console.log('  Framework:', chalk.yellow(config.framework));
         }
-        console.log('  Database:', chalk.cyan(config.database?.path || './.tfq/queue.db'));
+        console.log('  Database:', chalk.cyan(config.database?.path || './.tfq/tfq.db'));
         
         if (config.workspaces) {
           console.log();

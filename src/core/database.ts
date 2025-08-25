@@ -6,7 +6,7 @@ import { DatabaseConfig, QueueItem } from './types.js';
 
 export class TestDatabase {
   private db: Database.Database;
-  private readonly defaultPath = path.join(os.homedir(), '.tfq', 'queue.db');
+  private readonly defaultPath = path.join(os.homedir(), '.tfq', 'tfq.db');
 
   constructor(config: DatabaseConfig = {}) {
     // Check environment variable first, then config, then default

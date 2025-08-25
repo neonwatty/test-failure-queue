@@ -4,6 +4,7 @@ __pycache__/
 .venv/
 
 # local
+examples/configs/
 plans/
 .tfqrc
 .claude/
@@ -57,7 +58,7 @@ lerna-debug.log*
 *.db
 *.sqlite
 *.sqlite3
-example-queue.db
+example-tfq.db
 
 # Temporary files
 *.tmp

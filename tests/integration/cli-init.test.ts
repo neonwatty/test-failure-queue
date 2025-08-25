@@ -40,7 +40,7 @@ describe('CLI init command', () => {
       expect(fs.existsSync(configPath)).toBe(true);
       
       const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      expect(config.database?.path).toBe('./.tfq/queue.db');
+      expect(config.database?.path).toBe('./.tfq/tfq.db');
       expect(config.defaults?.autoAdd).toBe(true);
       expect(config.defaults?.parallel).toBe(4);
     });
@@ -92,14 +92,14 @@ describe('CLI init command', () => {
       runCommand('--ci');
       
       const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
-      expect(config.database?.path).toBe('/tmp/tfq-queue.db');
+      expect(config.database?.path).toBe('/tmp/tfq-tfq.db');
     });
 
     it('should create shared configuration', () => {
       runCommand('--shared');
       
       const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
-      expect(config.database?.path).toBe('./.tfq/shared-queue.db');
+      expect(config.database?.path).toBe('./.tfq/shared-tfq.db');
     });
 
     it('should output JSON when --json flag is used', () => {
@@ -170,8 +170,8 @@ describe('CLI init command', () => {
       
       const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
       expect(config.workspaces).toBeDefined();
-      expect(config.workspaces?.['packages/app']).toBe('./.tfq/app-queue.db');
-      expect(config.workspaces?.['packages/lib']).toBe('./.tfq/lib-queue.db');
+      expect(config.workspaces?.['packages/app']).toBe('./.tfq/app-tfq.db');
+      expect(config.workspaces?.['packages/lib']).toBe('./.tfq/lib-tfq.db');
     });
 
     it('should initialize with scope for sub-project', () => {
@@ -199,7 +199,7 @@ describe('CLI init command', () => {
       
       const config = JSON.parse(fs.readFileSync(path.join(tempDir, '.tfqrc'), 'utf-8'));
       expect(config.old).toBeUndefined();
-      expect(config.database?.path).toBe('/tmp/tfq-queue.db');
+      expect(config.database?.path).toBe('/tmp/tfq-tfq.db');
     });
 
     it('should handle JSON output for errors', () => {

@@ -174,7 +174,7 @@ export class ConfigManager {
 
   createDefaultConfig(targetPath?: string): void {
     const defaultConfig: ConfigFile = {
-      databasePath: '~/.tfq/queue.db',
+      databasePath: '~/.tfq/tfq.db',
       defaultPriority: 0,
       autoCleanup: false,
       maxRetries: 3,

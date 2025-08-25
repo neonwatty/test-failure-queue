@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 describe('TestFailureQueue', () => {
   let queue: TestFailureQueue;
-  const testDbPath = path.join(__dirname, '../test-queue.db');
+  const testDbPath = path.join(__dirname, '../test-tfq.db');
 
   beforeEach(() => {
     // Clean up any existing test database

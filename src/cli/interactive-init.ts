@@ -51,7 +51,7 @@ export async function interactiveInit(
     console.log();
 
     // Database path
-    const defaultDbPath = options.ci ? '/tmp/tfq-queue.db' : './.tfq/queue.db';
+    const defaultDbPath = options.ci ? '/tmp/tfq-tfq.db' : './.tfq/tfq.db';
     const dbPath = await question(
       'Where should the test queue database be stored?',
       options.dbPath || defaultDbPath
@@ -108,8 +108,8 @@ export async function interactiveInit(
       let workspacePath = await question('Workspace path');
       while (workspacePath) {
         const wsName = workspacePath.split('/').pop() || workspacePath;
-        workspaces[workspacePath] = `./.tfq/${wsName}-queue.db`;
-        console.log(chalk.gray(`  Added: ${workspacePath} → ./.tfq/${wsName}-queue.db`));
+        workspaces[workspacePath] = `./.tfq/${wsName}-tfq.db`;
+        console.log(chalk.gray(`  Added: ${workspacePath} → ./.tfq/${wsName}-tfq.db`));
         workspacePath = await question('Workspace path');
       }
     }

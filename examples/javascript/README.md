@@ -152,7 +152,7 @@ The `.tfqrc` file configures TFQ behavior:
 1. **Auto-detection**: TFQ automatically detects Jest from package.json
 2. **Priority Queue**: Higher priority failures are returned first by `tfq next`
 3. **Pattern Matching**: Configure custom failure patterns in .tfqrc
-4. **Database Location**: Queue persists in `~/.tfq/queue.db` by default
+4. **Database Location**: Queue persists in `~/.tfq/tfq.db` by default
 5. **JSON Output**: Add `--json` flag for programmatic integration
 
 ## Troubleshooting

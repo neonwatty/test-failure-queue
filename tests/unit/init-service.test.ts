@@ -51,7 +51,7 @@ describe('InitService', () => {
       const config = await service.initialize();
       
       expect(config).toBeDefined();
-      expect(config.database?.path).toBe('./.tfq/queue.db');
+      expect(config.database?.path).toBe('./.tfq/tfq.db');
       expect(config.defaults?.autoAdd).toBe(true);
       expect(config.defaults?.parallel).toBe(4);
     });
@@ -69,7 +69,7 @@ describe('InitService', () => {
         ci: true
       });
       
-      expect(config.database?.path).toBe('/tmp/tfq-queue.db');
+      expect(config.database?.path).toBe('/tmp/tfq-tfq.db');
     });
 
     it('should throw error if .tfqrc already exists and not in CI mode', async () => {
@@ -195,7 +195,7 @@ describe('InitService', () => {
       
       expect(config.language).toBe('javascript');
       expect(config.framework).toBe('vitest');
-      expect(config.database?.path).toBe('./.tfq/queue.db');
+      expect(config.database?.path).toBe('./.tfq/tfq.db');
       expect(config.defaults?.autoAdd).toBe(true);
       expect(config.defaults?.parallel).toBe(4);
     });
@@ -208,7 +208,7 @@ describe('InitService', () => {
         projectPath: tempDir
       });
       
-      expect(config.database?.path).toBe('/tmp/tfq-queue.db');
+      expect(config.database?.path).toBe('/tmp/tfq-tfq.db');
     });
 
     it('should generate shared config when shared flag is set', () => {
@@ -219,7 +219,7 @@ describe('InitService', () => {
         projectPath: tempDir
       });
       
-      expect(config.database?.path).toBe('./.tfq/shared-queue.db');
+      expect(config.database?.path).toBe('./.tfq/shared-tfq.db');
     });
 
     it('should generate workspace config when workspaceMode is enabled', () => {
@@ -247,8 +247,8 @@ describe('InitService', () => {
       });
       
       expect(config.workspaces).toBeDefined();
-      expect(config.workspaces?.['packages/app']).toBe('./.tfq/app-queue.db');
-      expect(config.workspaces?.['packages/lib']).toBe('./.tfq/lib-queue.db');
+      expect(config.workspaces?.['packages/app']).toBe('./.tfq/app-tfq.db');
+      expect(config.workspaces?.['packages/lib']).toBe('./.tfq/lib-tfq.db');
       expect(config.workspaceDefaults).toBeDefined();
     });
   });
@@ -325,7 +325,7 @@ describe('InitService', () => {
   describe('saveConfig', () => {
     it('should save configuration to file', async () => {
       const config: TfqConfig = {
-        database: { path: './.tfq/queue.db' },
+        database: { path: './.tfq/tfq.db' },
         language: 'javascript',
         framework: 'vitest',
         defaults: { autoAdd: true, parallel: 4 }
@@ -338,7 +338,7 @@ describe('InitService', () => {
 
     it('should save configuration to custom path', async () => {
       const config: TfqConfig = {
-        database: { path: './.tfq/queue.db' }
+        database: { path: './.tfq/tfq.db' }
       };
       
       const customPath = '/custom/path/.tfqrc';
