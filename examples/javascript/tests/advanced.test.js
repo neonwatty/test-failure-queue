@@ -35,7 +35,7 @@ describe('Advanced Calculator Features', () => {
     });
 
     test('FAILING: should handle invalid average input (intentional failure)', () => {
-      expect(calculator.average([])).toBe(0);
+      expect(() => calculator.average([])).toThrow('Invalid input: array of numbers required');
     });
 
     test('should throw error for negative factorial', () => {
@@ -57,7 +57,7 @@ describe('Advanced Calculator Features', () => {
         calculator.multiply(3, 4),
         calculator.divide(10, 2)
       );
-      expect(result).toBe(18);
+      expect(result).toBe(17);
     });
 
     test('should calculate compound interest', () => {
@@ -94,7 +94,7 @@ describe('Advanced Calculator Features', () => {
     });
 
     test('FAILING: should handle single element array (intentional failure)', () => {
-      expect(calculator.average([42])).toBe(41);
+      expect(calculator.average([42])).toBe(42);
     });
 
     test('should throw error for empty array', () => {

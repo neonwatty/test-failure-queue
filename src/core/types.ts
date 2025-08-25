@@ -31,6 +31,9 @@ export interface QueueOptions {
   configPath?: string;
 }
 
+// Claude types imported from services
+import type { ClaudeConfig } from '../services/claude/types.js';
+
 export interface ConfigFile {
   databasePath?: string;
   defaultPriority?: number;
@@ -42,6 +45,7 @@ export interface ConfigFile {
   defaultLanguage?: TestLanguage;
   defaultFrameworks?: Record<TestLanguage, TestFramework>;
   testCommands?: Record<string, string>;
+  claude?: ClaudeConfig;
 }
 
 export interface TfqConfig {

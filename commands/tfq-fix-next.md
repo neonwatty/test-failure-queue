@@ -1,32 +1,71 @@
-# /tfq-fix-next - Fix Next Test in Queue
+# tfq fix-next - Fix Next Test in Queue with Claude
 
 ## Description
-Retrieves the next test from the queue and launches a Task agent to fix it. Simple, sequential processing of one test at a time.
+Retrieves the next test from the queue and uses Claude to fix it automatically. Simple, sequential processing of one test at a time.
 
-## Implementation
+## Usage
+```bash
+tfq fix-next [options]
+```
 
-### 1. Get Next Test from Queue
-Use the Bash tool to execute `tfq next --json` to get the next test. If the queue is empty, it returns `{"success": false}`.
+## Options
+- `--claude-path <path>` - Path to Claude executable (overrides config)
+- `--test-timeout <ms>` - Timeout per test in milliseconds (overrides config)
+- `--json` - Output in JSON format
+- `--config <path>` - Custom config file path
 
-### 2. Launch Task Agent
-Create a Task agent with a clear prompt to:
-- Use the Read tool to read and understand the failing test
-- Use the Bash tool to run the test to see the exact failure
-- Analyze the error and use the Read tool to find the root cause in source files
-- Use the Edit tool to fix the bug in the source code (not just make the test pass)
-- Use the Bash tool to verify the fix by running the test again
-- Ensure no regression in related code
+## Configuration
+Enable Claude integration in your `.tfqrc` file:
+```json
+{
+  "claude": {
+    "enabled": true,
+    "claudePath": "/Users/username/.claude/local/claude",
+    "testTimeout": 420000,
+    "prompt": "run the failed test file {filePath} and debug any errors you encounter one at a time"
+  }
+}
+```
 
-### 3. Verify Fix
-After the Task agent completes:
-- Use the Bash tool to run the specific test again
+## Implementation Flow
 
-### 4. Report Status
-Use the Bash tool to show the remaining queue count using `tfq stats --json` to track progress.
+### 1. Validation
+- Check if Claude integration is enabled
+- Validate Claude path exists and is executable
+- Verify configuration settings
+
+### 2. Get Next Test
+- Dequeue the next test from the failure queue
+- Exit if queue is empty
+
+### 3. Fix Test with Claude
+- Launch Claude with the failing test path
+- Include error context from previous test runs
+- Apply configured timeout per test
+- Handle Claude process output and errors
+
+### 4. Report Results
+- Display success/failure status
+- Show processing duration
+- Display remaining queue statistics
 
 ## Error Handling
+- Configuration validation with clear error messages
+- Graceful handling of Claude process failures
+- Timeout management for long-running fixes
+- JSON output support for scripting
 
-- If queue is empty, notify user
-- If Task agent fails, increase test priority for retry
-- If test file doesn't exist, remove from queue
-- Handle Task agent timeouts gracefully
+## Examples
+```bash
+# Fix next test with default settings
+tfq fix-next
+
+# Override Claude path
+tfq fix-next --claude-path /custom/path/to/claude
+
+# Set custom timeout (10 minutes)
+tfq fix-next --test-timeout 600000
+
+# JSON output for scripting
+tfq fix-next --json
+```

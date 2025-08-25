@@ -24,6 +24,12 @@
     "dev": "tsx src/cli.ts",
     "test": "vitest run tests/unit tests/integration tests/examples",
     "test:all": "vitest run",
+    "test:core": "vitest run tests/unit tests/integration tests/examples",
+    "test:services": "vitest run tests/services",
+    "test:services:claude": "vitest run tests/services/claude",
+    "test:services:claude:unit": "vitest run tests/services/claude/claude-service.test.ts",
+    "test:services:claude:integration": "vitest run tests/services/claude/claude-integration.test.ts",
+    "test:with-services": "vitest run tests/unit tests/integration tests/examples tests/services",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:examples": "vitest run tests/examples",
@@ -32,7 +38,7 @@
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run clean && npm run build && npm run lint && npm run test",
+    "prepublishOnly": "npm run clean && npm run build && npm run lint && npm run test:core",
     "prepare": "npm run build"
   },
   "keywords": [
@@ -63,6 +69,7 @@
     "better-sqlite3": "^12.2.0",
     "chalk": "^5.6.0",
     "commander": "^14.0.0",
+    "execa": "^9.6.0",
     "minimatch": "^10.0.3",
     "tsx": "^4.20.4"
   },
