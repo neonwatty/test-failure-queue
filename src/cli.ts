@@ -1367,6 +1367,9 @@ program
   .option('--no-gitignore', 'Skip .gitignore modification')
   .option('--workspace-mode', 'Initialize for monorepo with workspaces')
   .option('--scope <path>', 'Initialize for specific monorepo sub-project')
+  .option('--with-claude', 'Include Claude Code integration setup')
+  .option('--skip-claude', 'Skip Claude Code integration setup')
+  .option('--claude-path <path>', 'Custom Claude executable path')
   .option('--json', 'Output result as JSON')
   .action(async (options) => {
     try {
@@ -1407,7 +1410,11 @@ program
         console.log(JSON.stringify({
           success: true,
           configPath: targetPath,
-          config
+          config,
+          features: {
+            claudeIntegration: config.claude?.enabled || false,
+            claudePath: config.claude?.claudePath || null
+          }
         }, null, 2));
       } else {
         console.log(chalk.green('✓'), 'TFQ initialized successfully!');
@@ -1423,6 +1430,16 @@ program
         }
         console.log('  Database:', chalk.cyan(config.database?.path || './.tfq/tfq.db'));
         
+        // Show Claude Code integration status
+        if (config.claude?.enabled) {
+          const claudePath = config.claude.claudePath || 'system PATH';
+          console.log('  Claude Code:', chalk.green('✓ Auto-detected at'), chalk.cyan(claudePath));
+        } else if (options.skipClaude) {
+          console.log('  Claude Code:', chalk.yellow('Skipped (--skip-claude used)'));
+        } else {
+          console.log('  Claude Code:', chalk.gray('Not found'), chalk.dim('(install from https://claude.ai/code)'));
+        }
+        
         if (config.workspaces) {
           console.log();
           console.log('Workspaces configured:');
@@ -1436,6 +1453,9 @@ program
         console.log('  1. Run your tests:', chalk.cyan('tfq run-tests --auto-detect --auto-add'));
         console.log('  2. View queued failures:', chalk.cyan('tfq list'));
         console.log('  3. Get next test to fix:', chalk.cyan('tfq next'));
+        if (config.claude?.enabled) {
+          console.log('  4. Fix tests with AI:', chalk.cyan('tfq fix-next'), 'or', chalk.cyan('tfq fix-all'));
+        }
       }
     } catch (error: any) {
       if (useJsonOutput(options)) {

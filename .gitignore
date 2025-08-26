@@ -12,6 +12,7 @@ plans/
 *CLAUDE.md
 .plans/
 .mcp.json
+.tfqrc
 
 # Dependencies
 node_modules/

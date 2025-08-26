@@ -63,6 +63,7 @@ export interface TfqConfig {
     autoAdd?: boolean;
     parallel?: number;
   };
+  claude?: ClaudeConfig;
 }
 
 export type TestLanguage = 'javascript' | 'ruby' | 'python' | 'go' | 'java';

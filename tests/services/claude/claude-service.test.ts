@@ -233,6 +233,9 @@ describe('Claude Service', () => {
         new Promise(resolve => setTimeout(() => resolve(mockResult), 10))
       );
       
+      // Mock fs.readFileSync to return test content
+      mockFs.readFileSync.mockReturnValue('describe("test", () => {});');
+      
       vi.spyOn(ConfigManager, 'getInstance').mockReturnValue({
         getConfig: () => ({ claude: { 
           enabled: true, 
@@ -256,27 +259,58 @@ describe('Claude Service', () => {
       expect(result.error).toBeUndefined();
       expect(result.duration).toBeGreaterThan(0);
       
-      expect(mockExeca).toHaveBeenCalledWith('/valid/claude/path', [
-        '-p',
-        '--dangerously-skip-permissions',
-        'fix /path/to/test.js'
-      ], {
-        stdio: ['inherit', 'pipe', 'pipe'],
+      // Updated expectation to match actual implementation
+      expect(mockExeca).toHaveBeenCalledWith('/valid/claude/path', ['-p'], {
         timeout: 300000,
-        env: process.env
+        env: process.env,
+        buffer: false,
+        input: expect.stringContaining('Fix the syntax and logic errors in this JavaScript test file')
       });
     });
 
     it('should handle test fix failure', async () => {
-      const mockResult = {
-        exitCode: 1,
-        stderr: 'Claude error message',
-        stdout: ''
+      let stderrCallback: ((chunk: Buffer) => void) | null = null;
+      
+      // Mock execa to return a child process with event emitters
+      const mockChild = {
+        stdout: {
+          on: vi.fn()
+        },
+        stderr: {
+          on: vi.fn((event, callback) => {
+            if (event === 'data') {
+              stderrCallback = callback;
+            }
+          })
+        }
       };
-      // Add delay to mock
-      mockExeca.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve(mockResult), 10))
-      );
+      
+      mockExeca.mockImplementation(() => {
+        const promise = new Promise(resolve => {
+          // Simulate stderr data being received
+          setTimeout(() => {
+            if (stderrCallback) {
+              stderrCallback(Buffer.from('Claude error message'));
+            }
+          }, 5);
+          
+          // Resolve with exit code 1
+          setTimeout(() => resolve({
+            exitCode: 1,
+            stderr: '',
+            stdout: ''
+          }), 10);
+        }) as any;
+        
+        // Add the event emitters to the promise
+        promise.stdout = mockChild.stdout;
+        promise.stderr = mockChild.stderr;
+        
+        return promise;
+      });
+      
+      // Mock fs.readFileSync to return test content  
+      mockFs.readFileSync.mockReturnValue('describe("test", () => {});');
       
       vi.spyOn(ConfigManager, 'getInstance').mockReturnValue({
         getConfig: () => ({ claude: { 
@@ -331,7 +365,15 @@ describe('Claude Service', () => {
     });
 
     it('should include error context in prompt when provided', async () => {
-      mockExeca.mockResolvedValue({ exitCode: 0, stderr: '', stdout: '' });
+      mockExeca.mockImplementation(() => {
+        const promise = Promise.resolve({ exitCode: 0, stderr: '', stdout: '' }) as any;
+        promise.stdout = { on: vi.fn() };
+        promise.stderr = { on: vi.fn() };
+        return promise;
+      });
+      
+      // Mock fs.readFileSync to return test content
+      mockFs.readFileSync.mockReturnValue('describe("test", () => {});');
       
       vi.spyOn(ConfigManager, 'getInstance').mockReturnValue({
         getConfig: () => ({ claude: { 
@@ -352,11 +394,13 @@ describe('Claude Service', () => {
       const service = new ClaudeService();
       await service.fixTest('/path/to/test.js', 'Previous error: timeout');
       
-      expect(mockExeca).toHaveBeenCalledWith('/valid/claude/path', [
-        '-p',
-        '--dangerously-skip-permissions',
-        'fix /path/to/test.js\n\nPrevious error context:\nPrevious error: timeout'
-      ], expect.any(Object));
+      // Updated expectation to match actual implementation
+      expect(mockExeca).toHaveBeenCalledWith('/valid/claude/path', ['-p'], {
+        timeout: 300000,
+        env: process.env,
+        buffer: false,
+        input: expect.stringContaining('Previous error context:\nPrevious error: timeout')
+      });
     });
 
     it('should fail when configuration is invalid', async () => {

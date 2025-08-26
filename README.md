@@ -48,6 +48,7 @@ Analyzing project at: /path/to/your/project
 
 ✓ Detected language: javascript
 ✓ Detected framework: vitest
+✓ Found Claude at: /Users/username/.claude/local/claude
 
 ✓ TFQ initialized successfully!
 
@@ -57,11 +58,13 @@ Detected:
   Language: javascript
   Framework: vitest
   Database: ./.tfq/tfq.db
+  Claude Code: Enabled (auto-detected)
 
 Next steps:
   1. Run your tests: tfq run-tests --auto-detect --auto-add
   2. View queued failures: tfq list
   3. Get next test to fix: tfq next
+  4. Fix tests with AI: tfq fix-next or tfq fix-all
 ```
 
 #### Step 1: Run Tests to Discover Failures
@@ -202,14 +205,23 @@ This command will:
 
 #### Initialize TFQ for your project
 ```bash
-# Basic initialization with auto-detection
+# Basic initialization with auto-detection (includes Claude integration if available)
 tfq init
 
-# Interactive setup mode
+# Interactive setup mode (asks about Claude integration)
 tfq init --interactive
 
 # Initialize with custom database path
 tfq init --db-path ./custom/path.db
+
+# Force Claude Code integration setup
+tfq init --with-claude
+
+# Skip Claude Code integration setup
+tfq init --skip-claude
+
+# Custom Claude executable path
+tfq init --claude-path /path/to/claude
 
 # Initialize for CI environment
 tfq init --ci
@@ -231,10 +243,14 @@ The `init` command creates a `.tfqrc` configuration file with:
 - Project-specific database location (default: `./.tfq/tfq.db`)
 - Auto-detected language and test framework
 - Default settings for test execution
+- **Claude Code integration** (auto-detected if available)
 
 **Options:**
 - `--db-path <path>`: Custom database location
-- `--interactive`: Step-by-step configuration wizard
+- `--interactive`: Step-by-step configuration wizard (includes Claude setup prompts)
+- `--with-claude`: Force Claude Code integration setup
+- `--skip-claude`: Skip Claude Code integration entirely
+- `--claude-path <path>`: Custom Claude executable path
 - `--ci`: Use CI-friendly settings (temp database)
 - `--shared`: Create team-shared configuration
 - `--workspace-mode`: Configure for monorepo
@@ -454,7 +470,48 @@ const config = new ConfigManager();
 
 ## Claude Code Integration
 
-TFQ integrates seamlessly with Claude Code for AI-powered test fixing. Custom slash commands are provided in the `commands/` directory:
+TFQ integrates seamlessly with Claude Code for AI-powered test fixing.
+
+### Automatic Setup
+When you run `tfq init`, TFQ automatically detects if Claude Code is installed and configures the integration:
+
+```bash
+$ tfq init
+✓ Found Claude at: /Users/username/.claude/local/claude
+✓ Claude Code integration enabled automatically
+```
+
+### Manual Control
+```bash
+# Force Claude integration setup
+tfq init --with-claude
+
+# Skip Claude integration
+tfq init --skip-claude
+
+# Use custom Claude path
+tfq init --claude-path /custom/path/to/claude
+
+# Interactive setup with Claude prompts
+tfq init --interactive
+```
+
+### AI-Powered Test Fixing Commands
+Once configured, you can use these commands for automated test fixing:
+
+```bash
+# Fix the next test in queue with AI
+tfq fix-next
+
+# Fix all tests iteratively with AI  
+tfq fix-all --max-iterations 10
+
+# Fix with custom timeout
+tfq fix-next --test-timeout 600000
+```
+
+### Claude Code Slash Commands
+Custom slash commands are also provided in the `commands/` directory:
 
 - **`/tfq-run`** - Discovers and queues failing tests
 - **`/tfq-fix-next`** - Fixes the next test in queue using a Task agent

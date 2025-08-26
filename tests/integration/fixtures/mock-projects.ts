@@ -211,6 +211,23 @@ export function cleanupMockProject(projectPath: string): void {
   }
 }
 
+export function getClaudeFixture(fixtureName: string): string {
+  const fixturePath = path.join(__dirname, 'claude', fixtureName);
+  return fs.readFileSync(fixturePath, 'utf8');
+}
+
+export function copyClaudeFixtureToProject(fixtureName: string, projectDir: string, targetPath: string): void {
+  const fixtureContent = getClaudeFixture(fixtureName);
+  const fullTargetPath = path.join(projectDir, targetPath);
+  const dir = path.dirname(fullTargetPath);
+  
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  fs.writeFileSync(fullTargetPath, fixtureContent);
+}
+
 export const expectedDetections = {
   javascriptJest: { language: 'javascript', framework: 'jest' },
   javascriptMocha: { language: 'javascript', framework: 'mocha' },

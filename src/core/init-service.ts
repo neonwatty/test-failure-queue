@@ -13,6 +13,9 @@ export interface InitOptions {
   gitignore?: boolean;  // Added for Commander.js --no-gitignore flag
   workspaceMode?: boolean;
   scope?: string;
+  withClaude?: boolean;
+  skipClaude?: boolean;
+  claudePath?: string;
 }
 
 export class InitService {
@@ -38,13 +41,16 @@ export class InitService {
     const detectedFramework = detectedLanguage ? this.detectFramework(detectedLanguage, projectPath) : null;
 
     // Generate default configuration
-    const config = this.generateDefaultConfig({
+    const config = await this.generateDefaultConfig({
       language: detectedLanguage,
       framework: detectedFramework,
       dbPath: options.dbPath,
       ci: options.ci,
       shared: options.shared,
       workspaceMode: options.workspaceMode,
+      withClaude: options.withClaude,
+      skipClaude: options.skipClaude,
+      claudePath: options.claudePath,
       projectPath
     });
 
@@ -70,16 +76,19 @@ export class InitService {
     return this.registry.detectFramework(language, projectPath);
   }
 
-  generateDefaultConfig(options: {
+  async generateDefaultConfig(options: {
     language: TestLanguage | null;
     framework: TestFramework | null;
     dbPath?: string;
     ci?: boolean;
     shared?: boolean;
     workspaceMode?: boolean;
+    withClaude?: boolean;
+    skipClaude?: boolean;
+    claudePath?: string;
     projectPath: string;
-  }): TfqConfig {
-    const { language, framework, dbPath, ci, shared, workspaceMode, projectPath } = options;
+  }): Promise<TfqConfig> {
+    const { language, framework, dbPath, ci, shared, workspaceMode, withClaude, skipClaude, claudePath, projectPath } = options;
 
     const config: TfqConfig = {
       database: {
@@ -118,6 +127,35 @@ export class InitService {
     if (shared) {
       // For shared configs, use a non-gitignored path
       config.database!.path = './.tfq/shared-tfq.db';
+    }
+
+    // Claude configuration
+    if (!skipClaude) {
+      try {
+        const { ClaudeConfigManager } = await import('../services/claude/config.js');
+        const claudeManager = new ClaudeConfigManager();
+        const detectedPath = claudeManager.detectClaudePath();
+        
+        // Enable Claude if explicitly requested OR if Claude is detected and not explicitly disabled
+        if (withClaude === true || (detectedPath && !skipClaude)) {
+          config.claude = {
+            enabled: true,
+            maxIterations: 10,
+            testTimeout: 300000,
+            prompt: "Fix the syntax and logic errors in this test file and return only the corrected code"
+          };
+          
+          // Set Claude path if provided or detected
+          if (claudePath) {
+            config.claude.claudePath = claudePath;
+          } else if (detectedPath) {
+            config.claude.claudePath = detectedPath;
+          }
+        }
+      } catch (error) {
+        // Silently ignore Claude service import errors
+        // This ensures the init process doesn't fail if Claude service has issues
+      }
     }
 
     return config;

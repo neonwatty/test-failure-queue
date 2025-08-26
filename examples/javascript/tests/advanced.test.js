@@ -34,7 +34,7 @@ describe('Advanced Calculator Features', () => {
       expect(calculator.power(10, -2)).toBe(0.01);
     });
 
-    test('FAILING: should handle invalid average input (intentional failure)', () => {
+    test('should handle invalid average input', () => {
       expect(() => calculator.average([])).toThrow('Invalid input: array of numbers required');
     });
 
@@ -52,7 +52,7 @@ describe('Advanced Calculator Features', () => {
       expect(final).toBe(5);
     });
 
-    test('FAILING: should handle complex mathematical expressions (intentional failure)', () => {
+    test('should handle complex mathematical expressions', () => {
       const result = calculator.add(
         calculator.multiply(3, 4),
         calculator.divide(10, 2)
@@ -81,7 +81,6 @@ describe('Advanced Calculator Features', () => {
       expect(result).toBe(2432902008176640000);
       expect(end - start).toBeLessThan(100);
     });
-
   });
 
   describe('Array Operations', () => {
@@ -93,7 +92,7 @@ describe('Advanced Calculator Features', () => {
       expect(calculator.average([-10, 0, 10, 20])).toBe(5);
     });
 
-    test('FAILING: should handle single element array (intentional failure)', () => {
+    test('should handle single element array', () => {
       expect(calculator.average([42])).toBe(42);
     });
 

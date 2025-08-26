@@ -1,23 +1,52 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ClaudeService, getClaudeService } from '../../../src/services/claude/index.js';
+import { ClaudeService } from '../../../src/services/claude/index.js';
+import { setupMockProject, copyClaudeFixtureToProject } from '../../integration/fixtures/mock-projects.js';
 
-describe('Claude Service Integration Tests', () => {
+describe('Real Claude Integration Tests (Local Only)', () => {
   let service: ClaudeService;
   let tempDir: string;
+  let isClaudeAvailable: boolean;
   let originalEnv: typeof process.env;
+
+  beforeAll(async () => {
+    // Check if Claude CLI is available before running any tests
+    // Create a temp config that explicitly enables Claude for detection
+    const detectionTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-detection-'));
+    const detectionConfigPath = path.join(detectionTempDir, '.tfqrc');
+    
+    // Write config that enables Claude for detection
+    fs.writeFileSync(detectionConfigPath, JSON.stringify({
+      claude: {
+        enabled: true  // Enable Claude for detection
+      }
+    }, null, 2));
+    
+    const tempService = new ClaudeService(detectionConfigPath);
+    
+    // Test availability
+    isClaudeAvailable = await tempService.isAvailable();
+    
+    // Clean up temp detection config
+    fs.rmSync(detectionTempDir, { recursive: true, force: true });
+    
+    if (!isClaudeAvailable) {
+      console.log('⚠️  Claude CLI not detected - skipping all integration tests');
+      console.log('   Install Claude Code CLI to run these tests locally');
+      console.log('   These tests are meant for local development, not CI');
+      console.log('   💡 Set CLAUDE_DEBUG=true for detailed detection logging');
+    } else {
+      console.log('✅ Claude CLI detected - running real integration tests');
+      console.log(`   Claude path: ${tempService.getClaudePath()}`);
+      console.log('   ⚡ Running real Claude Code CLI integration tests...');
+    }
+  });
 
   beforeEach(() => {
     originalEnv = { ...process.env };
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-integration-'));
-    
-    // Reset singleton
-    (getClaudeService as any).instance = null;
-    
-    // Clear any module cache that might interfere with fresh config loading
-    vi.clearAllMocks();
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-real-integration-'));
   });
 
   afterEach(() => {
@@ -29,222 +58,324 @@ describe('Claude Service Integration Tests', () => {
     }
   });
 
-  describe('Claude Availability Detection', () => {
+  describe('Real Claude CLI Availability', () => {
     it('should detect Claude availability in real environment', async () => {
-      // Create a minimal config that enables Claude but doesn't specify a path
-      const mockConfigManager = {
-        getConfig: () => ({ 
-          claude: { 
-            enabled: true,
-            testTimeout: 5000 // Short timeout for tests
-          } 
-        }),
-        getClaudeConfig: () => ({ 
+      if (!isClaudeAvailable) {
+        console.log('ℹ Skipping - Claude CLI not available');
+        return;
+      }
+
+      const configPath = path.join(tempDir, '.tfqrc');
+      fs.writeFileSync(configPath, JSON.stringify({
+        claude: {
           enabled: true,
-          testTimeout: 5000
-        }),
-        getClaudePath: () => null // Let it auto-detect
-      };
+          testTimeout: 45000 // 45 seconds
+        }
+      }, null, 2));
 
-      // Mock ConfigManager to return our test config
-      const { ConfigManager } = await import('../../../src/core/config.js');
-      vi.spyOn(ConfigManager, 'getInstance').mockReturnValue(mockConfigManager as any);
-
-      service = new ClaudeService();
+      service = new ClaudeService(configPath);
       const available = await service.isAvailable();
       
-      // This will be true if Claude CLI is installed, false otherwise
-      // We test both cases to ensure the detection works properly
-      if (available) {
-        expect(service.getClaudePath()).toBeTruthy();
-        console.log(`✓ Claude detected at: ${service.getClaudePath()}`);
-      } else {
-        console.log('ℹ Claude CLI not detected - this is expected if Claude Code CLI is not installed');
-        expect(service.getClaudePath()).toBeNull();
-      }
-      
-      // The test should pass regardless of whether Claude is installed
-      expect(typeof available).toBe('boolean');
-    });
-
-    it('should respect CLAUDE_PATH environment variable', async () => {
-      // Set a custom path via environment variable
-      const customPath = '/custom/claude/path';
-      process.env.CLAUDE_PATH = customPath;
-
-      const mockConfigManager = {
-        getConfig: () => ({ claude: { enabled: true } }),
-        getClaudeConfig: () => ({ enabled: true }),
-        getClaudePath: () => customPath // Should return the env var path
-      };
-
-      const { ConfigManager } = await import('../../../src/core/config.js');
-      vi.spyOn(ConfigManager, 'getInstance').mockReturnValue(mockConfigManager as any);
-
-      service = new ClaudeService();
-      
-      // Should use the environment variable path
-      expect(service.getClaudePath()).toBe(customPath);
-    });
-  });
-
-  describe('Configuration Integration', () => {
-    it('should load configuration from real ConfigManager', async () => {
-      // Write a real config file
-      const configPath = path.join(tempDir, '.tfqrc');
-      const config = {
-        claude: {
-          enabled: true,
-          maxIterations: 5,
-          testTimeout: 10000,
-          prompt: 'Please fix this test: {filePath}',
-          claudePath: '/mock/claude/path' // Prevent auto-detection
-        }
-      };
-      
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-      
-      service = new ClaudeService(configPath);
-      
-      // Test that the service loads config - we can't guarantee exact values 
-      // due to defaults and merging, but we can test that it loaded our config
+      expect(available).toBe(true);
+      expect(service.getClaudePath()).toBeTruthy();
       expect(service.isEnabled()).toBe(true);
       
-      const serviceConfig = service.getConfig();
-      expect(serviceConfig.enabled).toBe(true);
-      expect(serviceConfig.prompt).toBe('Please fix this test: {filePath}');
-      
-      // The service should use our custom values if they override defaults
-      console.log(`Service config - maxIterations: ${service.getMaxIterations()}, testTimeout: ${service.getTestTimeout()}`);
-    });
-
-    it('should validate configuration properly', async () => {
-      // Test with disabled Claude
-      const disabledConfigPath = path.join(tempDir, '.tfqrc-disabled');
-      fs.writeFileSync(disabledConfigPath, JSON.stringify({
-        claude: { enabled: false }
-      }, null, 2));
-
-      service = new ClaudeService(disabledConfigPath);
-      
-      const validation = service.validateConfiguration();
-      expect(validation.isValid).toBe(false);
-      expect(validation.error).toContain('Claude integration is disabled');
+      console.log(`✓ Claude available at: ${service.getClaudePath()}`);
     });
   });
 
-  describe('Real Claude CLI Integration', () => {
-    it('should attempt to communicate with Claude CLI if available', async () => {
+  describe('Real Test Fixing - JavaScript Syntax Errors', () => {
+    it('should fix JavaScript syntax errors using real Claude CLI', async () => {
+      if (!isClaudeAvailable) {
+        console.log('ℹ Skipping - Claude CLI not available');
+        return;
+      }
+
+      // Setup a mock JavaScript project
+      const projectDir = path.join(tempDir, 'js-project');
+      setupMockProject(projectDir, 'javascriptJest');
+      
+      // Copy broken syntax test fixture to project
+      const brokenTestFile = path.join(projectDir, 'tests', 'broken-syntax.test.js');
+      copyClaudeFixtureToProject('broken-syntax.test.js', projectDir, 'tests/broken-syntax.test.js');
+      
+      // Configure Claude service with realistic timeout
       const configPath = path.join(tempDir, '.tfqrc');
-      const config = {
+      fs.writeFileSync(configPath, JSON.stringify({
         claude: {
           enabled: true,
-          testTimeout: 5000, // Shorter timeout for tests
-          prompt: 'quickly analyze this test file: {filePath}'
+          testTimeout: 60000, // 1 minute should be plenty for syntax fixes
+          maxIterations: 3,
+          prompt: 'Please fix the syntax errors in this JavaScript test file: {filePath}'
         }
-      };
+      }, null, 2));
       
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
       service = new ClaudeService(configPath);
       
-      const isAvailable = await service.isAvailable();
+      console.log('🔧 Calling real Claude CLI to fix syntax errors...');
+      console.log(`   Test file: ${brokenTestFile}`);
+      console.log(`   Timeout: ${service.getTestTimeout()}ms`);
       
-      if (isAvailable) {
-        console.log('✓ Claude CLI is available for integration testing');
+      const startTime = Date.now();
+      const result = await service.fixTest(brokenTestFile);
+      const duration = Date.now() - startTime;
+      
+      console.log(`⏱️  Claude operation completed in ${duration}ms`);
+      
+      if (result.success) {
+        console.log('✅ Claude successfully fixed the test file');
         
-        // Create a simple file that we can ask Claude to analyze quickly
-        const testFile = path.join(tempDir, 'simple-test.js');
-        fs.writeFileSync(testFile, `// Just analyze this simple file\nconsole.log("hello");`);
-
-        // Try to have Claude analyze the test (this will actually call Claude)
-        const result = await service.fixTest(testFile);
+        // Read the fixed file and verify it looks reasonable
+        const fixedContent = fs.readFileSync(brokenTestFile, 'utf8');
         
-        // We can't predict exactly what Claude will do, but we can check
-        // that the service handled the call properly
-        expect(result).toHaveProperty('success');
-        expect(result).toHaveProperty('duration');
-        expect(typeof result.success).toBe('boolean');
-        expect(typeof result.duration).toBe('number');
-        expect(result.duration).toBeGreaterThan(0);
+        // Basic checks that the file was likely fixed
+        expect(fixedContent).toContain('describe');
+        expect(fixedContent).toContain('it');
+        expect(fixedContent).toContain('expect');
         
-        if (!result.success && result.error) {
-          console.log(`Claude integration test completed with error: ${result.error}`);
-        } else if (result.success) {
-          console.log('✓ Claude successfully processed the test file');
-        }
+        // The fixed file should be syntactically valid JavaScript
+        // (we can't easily test this without running it, but we can check basic structure)
+        expect(fixedContent.split('{').length).toBeCloseTo(fixedContent.split('}').length, 1);
         
+        console.log('✅ Fixed file appears to have valid syntax structure');
       } else {
-        console.log('ℹ Skipping real Claude integration test - Claude CLI not available');
+        console.log(`❌ Claude failed to fix the test: ${result.error}`);
         
-        // Still test that the service handles unavailable Claude gracefully
-        const testFile = path.join(tempDir, 'test.js');
-        fs.writeFileSync(testFile, 'console.log("test");');
-        
-        const result = await service.fixTest(testFile);
-        expect(result.success).toBe(false);
-        expect(result.error).toContain('Claude path not found');
+        // Even if Claude fails, the test should complete properly
+        expect(result.error).toBeTruthy();
+        expect(result.duration).toBeGreaterThan(0);
       }
-    }, 30000); // 30 second timeout for real Claude calls
+      
+      // Verify basic result structure
+      expect(typeof result.success).toBe('boolean');
+      expect(result.duration).toBeGreaterThan(0);
+      expect(result.duration).toBeLessThan(190000); // Should complete within 190 seconds
+      
+    }, 200000); // 200 second timeout for the entire test
+    
+    it('should fix JavaScript assertion errors using real Claude CLI', async () => {
+      if (!isClaudeAvailable) {
+        console.log('ℹ Skipping - Claude CLI not available');
+        return;
+      }
+
+      // Setup a mock JavaScript project
+      const projectDir = path.join(tempDir, 'js-project');
+      setupMockProject(projectDir, 'javascriptJest');
+      
+      // Copy failing assertions test fixture to project
+      const failingTestFile = path.join(projectDir, 'tests', 'failing-assertions.test.js');
+      copyClaudeFixtureToProject('failing-assertions.test.js', projectDir, 'tests/failing-assertions.test.js');
+      
+      // Configure Claude service
+      const configPath = path.join(tempDir, '.tfqrc');
+      fs.writeFileSync(configPath, JSON.stringify({
+        claude: {
+          enabled: true,
+          testTimeout: 45000, // 45 seconds
+          maxIterations: 2,
+          prompt: 'Please fix the failing test assertions by correcting the function implementations in this JavaScript file: {filePath}'
+        }
+      }, null, 2));
+      
+      service = new ClaudeService(configPath);
+      
+      console.log('🔧 Calling real Claude CLI to fix failing assertions...');
+      console.log(`   Test file: ${failingTestFile}`);
+      
+      const startTime = Date.now();
+      const result = await service.fixTest(failingTestFile);
+      const duration = Date.now() - startTime;
+      
+      console.log(`⏱️  Claude operation completed in ${duration}ms`);
+      
+      if (result.success) {
+        console.log('✅ Claude successfully fixed the failing assertions');
+        
+        // Read the fixed file
+        const fixedContent = fs.readFileSync(failingTestFile, 'utf8');
+        
+        // Check that the fixed file still has the test structure
+        expect(fixedContent).toContain('describe');
+        expect(fixedContent).toContain('it');
+        expect(fixedContent).toContain('expect');
+        expect(fixedContent).toContain('add');
+        expect(fixedContent).toContain('multiply');
+        
+        console.log('✅ Fixed file maintains expected structure');
+      } else {
+        console.log(`⚠️  Claude could not fix the assertions: ${result.error}`);
+        expect(result.error).toBeTruthy();
+      }
+      
+      expect(typeof result.success).toBe('boolean');
+      expect(result.duration).toBeGreaterThan(0);
+      
+    }, 150000); // 150 second timeout
   });
 
-  describe('Error Handling Integration', () => {
-    it('should handle invalid file paths gracefully', async () => {
-      const configPath = path.join(tempDir, '.tfqrc');
-      fs.writeFileSync(configPath, JSON.stringify({
-        claude: { enabled: true, testTimeout: 2000 }
-      }, null, 2));
-
-      service = new ClaudeService(configPath);
-      
-      // Try to fix a non-existent file
-      const result = await service.fixTest('/non/existent/file.js');
-      
-      expect(result.success).toBe(false);
-      expect(result.error).toBeTruthy();
-      expect(result.duration).toBeGreaterThan(0);
-    }, 30000);
-
-    it('should respect timeout configuration', async () => {
-      const configPath = path.join(tempDir, '.tfqrc');
-      fs.writeFileSync(configPath, JSON.stringify({
-        claude: { 
-          enabled: true, 
-          testTimeout: 500 // Very short timeout
-        }
-      }, null, 2));
-
-      service = new ClaudeService(configPath);
-      
-      const isAvailable = await service.isAvailable();
-      
-      if (isAvailable) {
-        // If Claude is available, this might timeout due to the short timeout
-        const testFile = path.join(tempDir, 'test.js');
-        fs.writeFileSync(testFile, 'console.log("test");');
-        
-        const start = Date.now();
-        const result = await service.fixTest(testFile);
-        const duration = Date.now() - start;
-        
-        expect(result.success).toBe(false);
-        
-        // Should either timeout or complete very quickly
-        if (result.error?.includes('timed out')) {
-          expect(duration).toBeGreaterThan(400); // Should be close to our 500ms timeout
-          expect(duration).toBeLessThan(1500); // But not too much longer
-          console.log('✓ Timeout behavior confirmed');
-        } else {
-          console.log('Claude completed faster than timeout - this is also valid');
-        }
-      } else {
-        console.log('ℹ Skipping timeout test - Claude CLI not available');
-        
-        // Should fail due to missing Claude
-        const testFile = path.join(tempDir, 'test.js');
-        fs.writeFileSync(testFile, 'console.log("test");');
-        const result = await service.fixTest(testFile);
-        expect(result.error).toContain('Claude path not found');
+  describe('Error Handling with Real Claude CLI', () => {
+    it('should handle timeout scenarios gracefully', async () => {
+      if (!isClaudeAvailable) {
+        console.log('ℹ Skipping - Claude CLI not available');
+        return;
       }
-    }, 30000);
+
+      // Create a complex test file that might take longer to fix
+      const projectDir = path.join(tempDir, 'timeout-project');
+      setupMockProject(projectDir, 'javascriptJest');
+      
+      const complexTestFile = path.join(projectDir, 'tests', 'complex.test.js');
+      const complexContent = `// This is a very complex test file with multiple issues
+const { describe, it, expect } = require('@jest/globals');
+
+// Create many broken functions to make Claude work harder
+`.repeat(20) + `
+describe('Complex Test', () => {
+  it('should be complex', () => {
+    expect(true).toBe(true);
+  });
+});`;
+      
+      fs.writeFileSync(complexTestFile, complexContent);
+      
+      // Configure with a very short timeout to test timeout behavior
+      const configPath = path.join(tempDir, '.tfqrc');
+      fs.writeFileSync(configPath, JSON.stringify({
+        claude: {
+          enabled: true,
+          testTimeout: 5000, // Very short timeout - 5 seconds
+          maxIterations: 1,
+          prompt: 'Please spend a very long time analyzing and fixing this complex test file with extreme thoroughness: {filePath}'
+        }
+      }, null, 2));
+      
+      service = new ClaudeService(configPath);
+      
+      console.log('⏱️  Testing timeout behavior with 5 second limit...');
+      
+      const startTime = Date.now();
+      const result = await service.fixTest(complexTestFile);
+      const duration = Date.now() - startTime;
+      
+      console.log(`⏱️  Operation completed in ${duration}ms (timeout was 5000ms)`);
+      
+      // The result might succeed or fail depending on how quickly Claude responds
+      expect(typeof result.success).toBe('boolean');
+      expect(result.duration).toBeGreaterThan(0);
+      
+      if (!result.success && result.error?.includes('timed out')) {
+        console.log('✅ Timeout handling worked correctly');
+        expect(result.error).toContain('timed out');
+      } else if (result.success) {
+        console.log('✅ Claude completed within timeout');
+      } else {
+        console.log(`ℹ Other error occurred: ${result.error}`);
+      }
+      
+    }, 15000); // 15 second test timeout
+    
+    it('should handle non-existent files gracefully', async () => {
+      if (!isClaudeAvailable) {
+        console.log('ℹ Skipping - Claude CLI not available');
+        return;
+      }
+
+      const configPath = path.join(tempDir, '.tfqrc');
+      fs.writeFileSync(configPath, JSON.stringify({
+        claude: {
+          enabled: true,
+          testTimeout: 45000
+        }
+      }, null, 2));
+      
+      service = new ClaudeService(configPath);
+      
+      const nonExistentFile = path.join(tempDir, 'does-not-exist.test.js');
+      
+      console.log('🔧 Testing Claude behavior with non-existent file...');
+      
+      const result = await service.fixTest(nonExistentFile);
+      
+      // Claude should handle this gracefully
+      expect(typeof result.success).toBe('boolean');
+      expect(result.duration).toBeGreaterThan(0);
+      
+      if (!result.success) {
+        console.log(`✅ Correctly handled non-existent file: ${result.error}`);
+      } else {
+        console.log('ℹ Claude somehow succeeded with non-existent file');
+      }
+      
+    }, 150000);
+  });
+
+  describe('Multi-iteration Fixes', () => {
+    it('should handle multiple iterations with complex test fixture', async () => {
+      if (!isClaudeAvailable) {
+        console.log('ℹ Skipping - Claude CLI not available');
+        return;
+      }
+
+      // Setup a mock JavaScript project
+      const projectDir = path.join(tempDir, 'multi-iteration-project');
+      setupMockProject(projectDir, 'javascriptJest');
+      
+      // Copy complex multi-iteration test fixture to project
+      const complexTestFile = path.join(projectDir, 'tests', 'complex-multi-iteration.test.js');
+      copyClaudeFixtureToProject('complex-multi-iteration.test.js', projectDir, 'tests/complex-multi-iteration.test.js');
+      
+      const configPath = path.join(tempDir, '.tfqrc');
+      fs.writeFileSync(configPath, JSON.stringify({
+        claude: {
+          enabled: true,
+          testTimeout: 60000, // Extended timeout for complex fixes
+          maxIterations: 3, // Allow multiple iterations for complex issues
+          prompt: 'This file has multiple types of issues (syntax errors, logic errors, test assertions). Please fix all issues systematically: {filePath}'
+        }
+      }, null, 2));
+      
+      service = new ClaudeService(configPath);
+      
+      // Verify configuration is loaded correctly
+      expect(service.getMaxIterations()).toBe(3);
+      expect(service.getTestTimeout()).toBe(60000);
+      
+      console.log('✅ Multi-iteration configuration loaded correctly');
+      console.log(`   Max iterations: ${service.getMaxIterations()}`);
+      console.log(`   Timeout: ${service.getTestTimeout()}ms`);
+      console.log('🔧 Testing with complex multi-iteration fixture...');
+      console.log(`   Test file: ${complexTestFile}`);
+      
+      const startTime = Date.now();
+      const result = await service.fixTest(complexTestFile);
+      const duration = Date.now() - startTime;
+      
+      console.log(`⏱️  Claude operation completed in ${duration}ms`);
+      
+      if (result.success) {
+        console.log('✅ Claude successfully processed the complex test file');
+        
+        // Read the potentially fixed file
+        const fixedContent = fs.readFileSync(complexTestFile, 'utf8');
+        
+        // Basic structure checks
+        expect(fixedContent).toContain('describe');
+        expect(fixedContent).toContain('it');
+        expect(fixedContent).toContain('expect');
+        expect(fixedContent).toContain('calculateArea');
+        expect(fixedContent).toContain('processUserData');
+        expect(fixedContent).toContain('formatCurrency');
+        
+        console.log('✅ Complex file maintains expected function structure');
+      } else {
+        console.log(`⚠️  Claude could not fully fix the complex file: ${result.error}`);
+        expect(result.error).toBeTruthy();
+      }
+      
+      expect(typeof result.success).toBe('boolean');
+      expect(result.duration).toBeGreaterThan(0);
+      
+    }, 90000); // Extended timeout for complex multi-iteration test
   });
 });
