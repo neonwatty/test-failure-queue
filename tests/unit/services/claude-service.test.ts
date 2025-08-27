@@ -344,13 +344,13 @@ describe('Claude Service', () => {
       vi.spyOn(ConfigManager, 'getInstance').mockReturnValue({
         getConfig: () => ({ claude: { 
           enabled: true, 
-          testTimeout: 5000,
+          testTimeout: 300000,
           prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         } }),
         getClaudeConfig: () => ({ 
           enabled: true, 
-          testTimeout: 5000,
+          testTimeout: 300000,
           prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         }),
@@ -361,7 +361,7 @@ describe('Claude Service', () => {
       const result = await service.fixTest('/path/to/test.js');
       
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Claude timed out after 5000ms');
+      expect(result.error).toBe('Claude timed out after 300000ms');
     });
 
     it('should include error context in prompt when provided', async () => {

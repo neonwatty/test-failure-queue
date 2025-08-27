@@ -975,8 +975,8 @@ program
       // Validate test timeout if provided
       if (options.testTimeout) {
         const timeout = parseInt(options.testTimeout, 10);
-        if (isNaN(timeout) || timeout < 1000) {
-          const errorMsg = 'Test timeout must be a number >= 1000ms';
+        if (isNaN(timeout) || timeout < 60000 || timeout > 600000) {
+          const errorMsg = 'Test timeout must be a number between 60000ms (1 min) and 600000ms (10 min)';
           if (useJsonOutput(options)) {
             console.log(JSON.stringify({ success: false, error: errorMsg }));
           } else {
@@ -1084,8 +1084,8 @@ program
       // Validate test timeout if provided
       if (options.testTimeout) {
         const timeout = parseInt(options.testTimeout, 10);
-        if (isNaN(timeout) || timeout < 1000) {
-          const errorMsg = 'Test timeout must be a number >= 1000ms';
+        if (isNaN(timeout) || timeout < 60000 || timeout > 600000) {
+          const errorMsg = 'Test timeout must be a number between 60000ms (1 min) and 600000ms (10 min)';
           if (useJsonOutput(options)) {
             console.log(JSON.stringify({ success: false, error: errorMsg }));
           } else {

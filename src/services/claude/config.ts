@@ -38,8 +38,8 @@ export class ClaudeConfigManager {
   private validateClaudeConfig(claude: ClaudeConfig): void {
     // Validate testTimeout
     if (claude.testTimeout !== undefined) {
-      if (typeof claude.testTimeout !== 'number' || claude.testTimeout < 1000) {
-        console.warn('Warning: Claude testTimeout must be a number >= 1000ms');
+      if (typeof claude.testTimeout !== 'number' || claude.testTimeout < 60000 || claude.testTimeout > 600000) {
+        console.warn('Warning: Claude testTimeout must be a number between 60000ms (1 min) and 600000ms (10 min)');
         claude.testTimeout = 420000; // Default to 7 minutes
       }
     }
@@ -340,7 +340,7 @@ export class ClaudeConfigManager {
       enabled: false,
       maxIterations: 20,
       testTimeout: 420000,
-      prompt: 'Run the test file at {testFilePath} and debug any errors you encounter one at a time. Then run the test again to verify that your changes have fixed any errors.'
+      prompt: 'Run the test file at {testFilePath} and debug any errors you encounter one at a time.  Double check your work after making your changes. Then run the test again to verify that your changes have fixed any errors.'
     };
   }
 }

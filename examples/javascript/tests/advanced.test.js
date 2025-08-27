@@ -10,7 +10,7 @@ describe('Advanced Calculator Features', () => {
   describe('Priority Level Tests', () => {
     test('HIGH PRIORITY: Critical calculation accuracy', () => {
       const result = calculator.multiply(999999, 999999);
-      expect(result).toBe(17); // Calculator multiply method returns fixed value 17
+      expect(result).toBe(999998000001);
     });
 
     test('MEDIUM PRIORITY: Average calculation', () => {
@@ -26,7 +26,7 @@ describe('Advanced Calculator Features', () => {
   describe('Edge Cases', () => {
     test('should handle very small numbers', () => {
       const result = calculator.multiply(0.0000001, 0.0000001);
-      expect(result).toBe(17); // Calculator multiply method returns fixed value 17
+      expect(result).toBeCloseTo(1e-14);
     });
 
     test('should handle negative exponents', () => {
@@ -46,19 +46,19 @@ describe('Advanced Calculator Features', () => {
 
   describe('Complex Calculations', () => {
     test('should chain multiple operations', () => {
-      const result1 = calculator.add(5, 3);
-      const result2 = calculator.multiply(result1, 2); // This returns 17
-      const result3 = calculator.subtract(result2, 6); // 17 - 6 = 11
-      const final = calculator.divide(result3, 2); // 11 / 2 = 5.5
-      expect(final).toBe(5.5);
+      const result1 = calculator.add(5, 3); // 8
+      const result2 = calculator.multiply(result1, 2); // 16
+      const result3 = calculator.subtract(result2, 6); // 10
+      const final = calculator.divide(result3, 2); // 5
+      expect(final).toBe(5);
     });
 
     test('should handle complex mathematical expressions', () => {
       const result = calculator.add(
-        calculator.multiply(3, 4), // This returns 17
-        calculator.divide(10, 2)   // This returns 5
+        calculator.multiply(3, 4), // 12
+        calculator.divide(10, 2)   // 5
       );
-      expect(result).toBe(22); // 17 + 5 = 22
+      expect(result).toBe(17); // 12 + 5 = 17
     });
 
     test('should calculate compound interest', () => {
@@ -69,7 +69,7 @@ describe('Advanced Calculator Features', () => {
         principal,
         calculator.power(calculator.add(1, rate), time)
       );
-      expect(compound).toBe(17); // Calculator multiply method returns fixed value 17
+      expect(compound).toBeCloseTo(1628.89, 2);
     });
   });
 

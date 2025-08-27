@@ -49,7 +49,7 @@ describe('ClaudeService.fixNextTest() Method', () => {
         enabled: true,
         claudePath: '/valid/claude/path',
         maxIterations: 3,
-        testTimeout: 30000
+        testTimeout: 300000
       }
     });
     
@@ -60,7 +60,7 @@ describe('ClaudeService.fixNextTest() Method', () => {
           enabled: true,
           claudePath: '/valid/claude/path',
           maxIterations: 3,
-          testTimeout: 30000
+          testTimeout: 300000
         }
       })
     };
@@ -125,7 +125,7 @@ describe('ClaudeService.fixNextTest() Method', () => {
         '/valid/claude/path',
         expect.any(Array),
         expect.objectContaining({
-          timeout: 30000,
+          timeout: 300000,
           input: expect.stringContaining(testPath)
         })
       );
@@ -292,7 +292,7 @@ describe('ClaudeService.fixNextTest() Method', () => {
       
       // Execute
       const result = await claudeService.fixNextTest(mockQueue, {
-        testTimeout: 5000
+        testTimeout: 300000
       });
       
       // Verify timeout handling
@@ -390,7 +390,7 @@ describe('ClaudeService.fixNextTest() Method', () => {
       const testPath = '/path/to/test.js';
       mockQueue.enqueue(testPath, 1);
       
-      const customTimeout = 60000;
+      const customTimeout = 180000; // 3 minutes - within valid range
       
       // Execute with timeout override  
       await claudeService.fixNextTest(mockQueue, {
@@ -398,15 +398,79 @@ describe('ClaudeService.fixNextTest() Method', () => {
         useJsonOutput: true
       });
       
-      // Verify execa was called with correct parameters
+      // Verify execa was called with the custom timeout value
       expect(mockExeca).toHaveBeenCalledWith(
         '/valid/claude/path',
         ['-p'],
         expect.objectContaining({
-          timeout: expect.any(Number), // Should be the default timeout since override logic has a bug
+          timeout: customTimeout, // Should use the override timeout
           env: expect.any(Object),
           buffer: false,
           input: expect.stringContaining(testPath)
+        })
+      );
+    });
+
+    it('should use default timeout when no override provided', async () => {
+      // Setup
+      const testPath = '/path/to/test.js';
+      mockQueue.enqueue(testPath, 1);
+      
+      // Execute without timeout override
+      await claudeService.fixNextTest(mockQueue, {
+        useJsonOutput: true
+      });
+      
+      // Verify execa was called with default timeout
+      expect(mockExeca).toHaveBeenCalledWith(
+        '/valid/claude/path',
+        ['-p'],
+        expect.objectContaining({
+          timeout: 300000, // Should use the service's default timeout
+          env: expect.any(Object),
+          buffer: false,
+          input: expect.stringContaining(testPath)
+        })
+      );
+    });
+
+    it('should validate timeout override range', async () => {
+      // Setup
+      const testPath = '/path/to/test.js';
+      mockQueue.enqueue(testPath, 1);
+      
+      // Test with invalid timeout (too low)
+      await claudeService.fixNextTest(mockQueue, {
+        testTimeout: 30000, // 30 seconds - below minimum
+        useJsonOutput: true
+      });
+      
+      // Should still use service's default timeout when override is invalid
+      expect(mockExeca).toHaveBeenCalledWith(
+        '/valid/claude/path',
+        ['-p'],
+        expect.objectContaining({
+          timeout: 300000, // Service default, not the invalid override
+          env: expect.any(Object)
+        })
+      );
+      
+      mockExeca.mockClear();
+      mockQueue.enqueue(testPath, 1); // Re-enqueue for next test
+      
+      // Test with invalid timeout (too high)
+      await claudeService.fixNextTest(mockQueue, {
+        testTimeout: 700000, // 11+ minutes - above maximum
+        useJsonOutput: true
+      });
+      
+      // Should still use service's default timeout when override is invalid
+      expect(mockExeca).toHaveBeenCalledWith(
+        '/valid/claude/path',
+        ['-p'],
+        expect.objectContaining({
+          timeout: 300000, // Service default, not the invalid override
+          env: expect.any(Object)
         })
       );
     });

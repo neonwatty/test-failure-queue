@@ -252,6 +252,75 @@ describe('Claude Service Configuration Tests', () => {
       }
     });
 
+    it('should validate testTimeout within 1-10 minute range', async () => {
+      const { ClaudeConfigManager } = await import('../../../src/services/claude/config.js');
+      
+      // Mock console.warn to capture validation warnings
+      const originalWarn = console.warn;
+      const warnings: string[] = [];
+      console.warn = (msg: string) => warnings.push(msg);
+
+      try {
+        // Test minimum validation (too low)
+        const tooLowConfig = {
+          enabled: true,
+          testTimeout: 59999 // Just under 1 minute
+        };
+
+        const tooLowManager = new ClaudeConfigManager(tooLowConfig);
+        expect(warnings.some(w => w.includes('testTimeout must be a number between 60000ms (1 min) and 600000ms (10 min)'))).toBe(true);
+        expect(tooLowManager.getTestTimeout()).toBe(420000); // Should use default
+
+        warnings.length = 0; // Clear warnings
+
+        // Test maximum validation (too high)
+        const tooHighConfig = {
+          enabled: true,
+          testTimeout: 600001 // Just over 10 minutes
+        };
+
+        const tooHighManager = new ClaudeConfigManager(tooHighConfig);
+        expect(warnings.some(w => w.includes('testTimeout must be a number between 60000ms (1 min) and 600000ms (10 min)'))).toBe(true);
+        expect(tooHighManager.getTestTimeout()).toBe(420000); // Should use default
+
+        warnings.length = 0; // Clear warnings
+
+        // Test valid range (should not warn)
+        const validConfig = {
+          enabled: true,
+          testTimeout: 300000 // 5 minutes - valid
+        };
+
+        const validManager = new ClaudeConfigManager(validConfig);
+        expect(warnings.length).toBe(0); // No warnings
+        expect(validManager.getTestTimeout()).toBe(300000); // Should use provided value
+
+        // Test edge cases (boundaries)
+        warnings.length = 0;
+        
+        const minValidConfig = {
+          enabled: true,
+          testTimeout: 60000 // Exactly 1 minute
+        };
+
+        const minValidManager = new ClaudeConfigManager(minValidConfig);
+        expect(warnings.length).toBe(0); // No warnings
+        expect(minValidManager.getTestTimeout()).toBe(60000);
+
+        const maxValidConfig = {
+          enabled: true,
+          testTimeout: 600000 // Exactly 10 minutes
+        };
+
+        const maxValidManager = new ClaudeConfigManager(maxValidConfig);
+        expect(warnings.length).toBe(0); // No warnings
+        expect(maxValidManager.getTestTimeout()).toBe(600000);
+
+      } finally {
+        console.warn = originalWarn;
+      }
+    });
+
     it('should handle verbose/output-format dependency correctly', async () => {
       const { ClaudeConfigManager } = await import('../../../src/services/claude/config.js');
       
@@ -331,7 +400,7 @@ describe('Claude Service Configuration Tests', () => {
         getConfig: () => ({ 
           claude: { 
             enabled: true,
-            testTimeout: 5000 // Short timeout for tests
+            testTimeout: 300000 // Short timeout for tests
           } 
         }),
         getClaudeConfig: () => ({ 

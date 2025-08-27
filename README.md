@@ -473,7 +473,7 @@ tfq fix-next
 # Fix all tests iteratively with AI  
 tfq fix-all --max-iterations 10
 
-# Fix with custom timeout
+# Fix with custom timeout (1-10 minutes allowed)
 tfq fix-next --test-timeout 600000
 ```
 
@@ -497,7 +497,7 @@ TFQ supports all Claude Code CLI options through `.tfqrc` configuration. These o
     "enabled": true,
     "claudePath": "/path/to/claude",
     "maxIterations": 10,
-    "testTimeout": 300000,
+    "testTimeout": 300000,  // 1-10 minutes (60000-600000ms)
     
     // Security & Permissions
     "dangerouslySkipPermissions": true,     // Skip permission prompts (dev mode)

@@ -56,7 +56,7 @@ tfq next --group                  # Get next group of tests
 tfq fix-next                      # Fix next test with Claude Code
 tfq fix-all                       # Fix all tests iteratively Claude Code
 tfq fix-all --max-iterations 5    # Limit number of fixes
-tfq fix-next --test-timeout 300000  # Custom timeout (milliseconds)
+tfq fix-next --test-timeout 300000  # Custom timeout (1-10 minutes: 60000-600000ms)
 ```
 
 ### Claude Configuration Options

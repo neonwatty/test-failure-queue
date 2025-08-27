@@ -22,7 +22,7 @@ export default defineConfig({
         '*.config.js'
       ]
     },
-    testTimeout: 150000,
+    testTimeout: 660000,
     hookTimeout: 30000,
   },
   resolve: {

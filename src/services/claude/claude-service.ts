@@ -64,7 +64,7 @@ export class ClaudeService {
     };
   }
 
-  async fixTest(filePath: string, errorContext?: string): Promise<ClaudeFixResult> {
+  async fixTest(filePath: string, errorContext?: string, timeoutOverride?: number): Promise<ClaudeFixResult> {
     const startTime = Date.now();
     
     // Validate configuration first
@@ -88,7 +88,7 @@ export class ClaudeService {
     }
     
     try {
-      const timeout = this.config.testTimeout || 420000; // Default 7 minutes
+      const timeout = timeoutOverride || this.config.testTimeout || 420000; // Use override or default 7 minutes
       
       console.log('🔄 Starting Claude CLI with real-time streaming...');
       console.log('📝 Using prompt:', prompt.substring(0, 200) + '...');
@@ -247,17 +247,16 @@ export class ClaudeService {
     }
     
     // Apply timeout override if provided
+    let timeoutOverride: number | undefined;
     if (options.testTimeout) {
       const timeout = parseInt(options.testTimeout.toString(), 10);
-      if (!isNaN(timeout) && timeout >= 1000) {
-        // Create a new config with the timeout override
-        const config = this.getConfig();
-        config.testTimeout = timeout;
+      if (!isNaN(timeout) && timeout >= 60000 && timeout <= 600000) {
+        timeoutOverride = timeout;
       }
     }
     
     // Fix the test
-    const fixResult = await this.fixTest(testPath, errorContext);
+    const fixResult = await this.fixTest(testPath, errorContext, timeoutOverride);
     
     // Verify the fix if Claude processing was successful
     let verificationResult: {
