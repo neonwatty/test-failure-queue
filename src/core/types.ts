@@ -31,6 +31,9 @@ export interface QueueOptions {
   configPath?: string;
 }
 
+// Claude types imported from services
+import type { ClaudeConfig } from '../services/claude/types.js';
+
 export interface ConfigFile {
   databasePath?: string;
   defaultPriority?: number;
@@ -42,6 +45,7 @@ export interface ConfigFile {
   defaultLanguage?: TestLanguage;
   defaultFrameworks?: Record<TestLanguage, TestFramework>;
   testCommands?: Record<string, string>;
+  claude?: ClaudeConfig;
 }
 
 export interface TfqConfig {
@@ -59,6 +63,7 @@ export interface TfqConfig {
     autoAdd?: boolean;
     parallel?: number;
   };
+  claude?: ClaudeConfig;
 }
 
 export type TestLanguage = 'javascript' | 'ruby' | 'python' | 'go' | 'java';
@@ -73,6 +78,7 @@ export interface TestRunnerOptions {
   skipUnsupportedCheck?: boolean;
   verbose?: boolean;
   configPath?: string;  // Path to config file to use
+  testPath?: string;    // Path to specific test file to run
 }
 
 export interface TestRunResult {

@@ -1,48 +1,133 @@
-# /tfq-fix-all - Complete Automated Test Fixing
+# tfq fix-all - Complete Automated Test Fixing with Claude
 
 ## Description
-Runs tests to discover failures, then iteratively fixes each test one by one until the queue is empty or maximum iterations are reached.
+Runs tests to discover failures, then iteratively fixes each test one by one using Claude until the queue is empty or maximum iterations are reached. Includes comprehensive progress tracking and final verification.
+
+## Usage
+```bash
+tfq fix-all [options]
+```
+
+## Options
+- `--claude-path <path>` - Path to Claude executable (overrides config)
+- `--max-iterations <number>` - Maximum number of tests to fix (default: 20)
+- `--test-timeout <ms>` - Timeout per test in milliseconds (overrides config)
+- `--json` - Output in JSON format
+- `--config <path>` - Custom config file path
 
 ## Configuration
-- Maximum iterations: 20 tests (configurable)
-- Verify all tests pass after completion
-- Clear queue on success
+Enable Claude integration in your `.tfqrc` file:
+```json
+{
+  "claude": {
+    "enabled": true,
+    "claudePath": "/Users/username/.claude/local/claude",
+    "maxIterations": 20,
+    "testTimeout": 420000,
+    "prompt": "run the failed test file {testFilePath} and debug any errors you encounter one at a time"
+  }
+}
+```
 
-## Implementation
+## Implementation Flow
 
-### Step 1: Clear Queue and Run Tests (Task Agent)
-Launch a Task agent to:
-- Use the Bash tool to clear existing queue with `tfq clear --confirm`
-- Use the Bash tool to run `tfq run-tests --auto-detect --auto-add --json` to populate queue
-- Use the Bash tool to execute `tfq list --json` to get the queue contents
-- Return the list of failed test paths
+### Step 1: Discovery Phase
+- Clear existing queue to start fresh
+- Run test suite to identify all current failures
+- Add failing tests to queue with error context
+- Exit early if all tests already pass
 
-### Step 2: Iterative Fixing
-Loop through the failed tests from Step 1:
-- Use the Bash tool to get next test with `tfq next --json` (dequeues it)
-- Launch Task agent to fix that specific test
-- Task agent should:
-  - Use the Read tool to read and understand the failing test
-  - Use the Read tool to find the root cause in source files
-  - Use the Edit tool to fix the bug
-  - Use the Bash tool to verify the fix by running the test
-- Track success/failure counts
+### Step 2: Iterative Fixing Phase
+- Process up to `maxIterations` tests from the queue
+- For each test:
+  - Launch Claude with the failing test path
+  - Include error context from test output
+  - Apply configured timeout per test
+  - Track success/failure statistics
 - Continue until queue empty or max iterations reached
 
-### Step 3: Final Verification (Task Agent)
-Launch a Task agent to:
-- Use the Bash tool to run `tfq run-tests --auto-detect --json` to verify all tests pass
-- If all tests pass, use the Bash tool to clear queue with `tfq clear --confirm`
-- Return final statistics
+### Step 3: Final Verification Phase
+- Run complete test suite to verify all tests pass
+- Clear queue if all tests are now passing
+- Report final statistics and status
 
-## Workflow Summary
-
-1. **Task Agent**: Clear queue, then populate with fresh test failures
-2. **Loop**: Fix tests one by one using tfq CLI and Task agents
-3. **Task Agent**: Verify and clean up using tfq CLI
+## Progress Tracking
+- Real-time progress updates during execution
+- Comprehensive statistics:
+  - Total tests processed
+  - Successfully fixed tests
+  - Failed fix attempts
+  - Skipped tests (if max iterations reached)
+  - Overall success status
 
 ## Error Handling
-
+- Configuration validation with clear error messages
+- Graceful handling of Claude process failures
 - Continue processing even if individual fixes fail
-- Track both successes and failures
-- Save progress in queue for resumption if interrupted
+- Timeout management for long-running fixes
+- JSON output support for CI/scripting
+
+## Examples
+```bash
+# Fix all tests with default settings
+tfq fix-all
+
+# Fix up to 10 tests maximum
+tfq fix-all --max-iterations 10
+
+# Override Claude path and timeout
+tfq fix-all --claude-path /custom/path/to/claude --test-timeout 600000
+
+# JSON output for CI integration
+tfq fix-all --json
+```
+
+## Exit Codes
+- `0` - All tests are now passing
+- `1` - Some tests still failing or errors occurred
+
+## Output Format
+### Standard Output
+```
+🚀 TFQ Automated Test Fixer with Claude
+==================================================
+
+🔄 Step 1: Clearing queue and discovering test failures...
+✅ Queue cleared
+✅ Tests run and failures added to queue
+📊 Found 5 failed tests
+
+🔧 Step 2: Fixing tests iteratively...
+
+🧪 [1/5] Fixing: /path/to/test1.js
+✅ Claude processing completed for /path/to/test1.js
+
+🧪 [2/5] Fixing: /path/to/test2.js
+❌ Failed to fix test: timeout after 420000ms
+
+🔍 Step 3: Final verification...
+✅ Tests run and verification complete
+🎉 All tests pass! Queue cleared.
+
+📊 Final Results:
+Total tests processed: 5
+Successfully fixed: 4
+Failed to fix: 1
+Skipped tests: 0
+Iterations completed: 5
+All tests passing: ✅ YES
+
+🎉 All tests are now passing!
+```
+
+### JSON Output
+```json
+{
+  "totalTests": 5,
+  "fixedTests": 4,
+  "failedFixes": 1,
+  "skippedTests": 0,
+  "allTestsPass": true,
+  "iterations": 5
+}
+```

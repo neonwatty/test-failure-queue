@@ -91,7 +91,8 @@ export class ConfigManager {
       colorOutput: merged.colorOutput || configFile.colorOutput,
       defaultLanguage: merged.defaultLanguage || configFile.defaultLanguage,
       defaultFrameworks: merged.defaultFrameworks || configFile.defaultFrameworks,
-      testCommands: merged.testCommands || configFile.testCommands
+      testCommands: merged.testCommands || configFile.testCommands,
+      claude: merged.claude || configFile.claude
     };
     
     this.validateConfig(finalConfig);
@@ -132,7 +133,10 @@ export class ConfigManager {
       console.warn('Warning: testCommands must be an object');
       delete config.testCommands;
     }
+    
+    // Note: Claude configuration validation is handled by ClaudeConfigManager
   }
+
 
   private expandPath(filePath: string): string {
     if (filePath.startsWith('~/')) {
@@ -144,6 +148,7 @@ export class ConfigManager {
     }
     return filePath;
   }
+
 
   getConfig(): ConfigFile {
     const config = { ...this.config };
@@ -197,6 +202,7 @@ export class ConfigManager {
         'python:pytest': 'pytest',
         'python:unittest': 'python -m unittest'
       }
+      // Note: Claude configuration is optional and handled by services/claude
     };
 
     const configPath = targetPath || path.join(process.cwd(), '.tfqrc');

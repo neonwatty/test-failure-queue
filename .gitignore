@@ -12,6 +12,7 @@ plans/
 *CLAUDE.md
 .plans/
 .mcp.json
+.tfqrc
 
 # Dependencies
 node_modules/
@@ -65,6 +66,9 @@ example-tfq.db
 .temp/
 tmp/
 temp/
+
+# Integration test temporary directories
+tests/tmp-integration-*/
 
 # Cache
 .cache/

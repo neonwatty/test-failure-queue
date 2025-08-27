@@ -417,4 +417,125 @@ describe('TestRunner', () => {
       });
     });
   });
+
+  describe('testPath parameter', () => {
+    it('should use testPath when constructing test command', () => {
+      const runner = new TestRunner({
+        language: 'javascript',
+        framework: 'jest',
+        testPath: '/path/to/specific/test.js'
+      });
+      
+      // The command should include the testPath
+      expect(runner['command']).toBe('npx jest /path/to/specific/test.js');
+    });
+
+    it('should use default command when no testPath provided', () => {
+      const runner = new TestRunner({
+        language: 'javascript',
+        framework: 'jest'
+      });
+      
+      // Should use default npm test command
+      expect(runner['command']).toBe('npm test');
+    });
+
+    it('should handle testPath for different frameworks', () => {
+      const vitestRunner = new TestRunner({
+        language: 'javascript',
+        framework: 'vitest',
+        testPath: '/path/to/test.js'
+      });
+      
+      const mochaRunner = new TestRunner({
+        language: 'javascript',
+        framework: 'mocha',
+        testPath: '/path/to/test.js'
+      });
+
+      expect(vitestRunner['command']).toBe('npx vitest run /path/to/test.js');
+      expect(mochaRunner['command']).toBe('npx mocha /path/to/test.js');
+    });
+
+    it('should run single test file successfully with testPath', () => {
+      const testOutput = `
+        PASS /path/to/specific/test.js
+        ✓ should pass test case (5ms)
+        
+        Test Suites: 1 passed, 1 total
+        Tests:       1 passed, 1 total
+      `;
+      
+      mockExecSync.mockReturnValue(testOutput);
+
+      const runner = new TestRunner({
+        language: 'javascript',
+        framework: 'jest',
+        testPath: '/path/to/specific/test.js'
+      });
+      
+      const result = runner.run();
+      
+      expect(result.success).toBe(true);
+      expect(result.exitCode).toBe(0);
+      expect(result.failingTests).toEqual([]);
+      expect(mockExecSync).toHaveBeenCalledWith(
+        'npx jest /path/to/specific/test.js',
+        { encoding: 'utf8', stdio: 'pipe' }
+      );
+    });
+
+    it('should detect failing single test with testPath', () => {
+      const testOutput = `
+        FAIL /path/to/specific/math.test.js
+        × should fail test case (5ms)
+        
+        Test Suites: 1 failed, 1 total
+        Tests:       1 failed, 1 total
+      `;
+      
+      mockExecSync.mockImplementation(() => {
+        const error: any = new Error('Tests failed');
+        error.status = 1;
+        error.stdout = testOutput;
+        error.stderr = '';
+        throw error;
+      });
+
+      const runner = new TestRunner({
+        language: 'javascript',
+        framework: 'jest',
+        testPath: '/path/to/specific/math.test.js'
+      });
+      
+      const result = runner.run();
+      
+      expect(result.success).toBe(false);
+      expect(result.exitCode).toBe(1);
+      expect(result.failingTests).toEqual(['/path/to/specific/math.test.js']);
+      expect(result.totalFailures).toBe(1);
+    });
+
+    it('should work with relative testPath', () => {
+      const runner = new TestRunner({
+        language: 'javascript',
+        framework: 'vitest',
+        testPath: 'tests/unit/math.test.js'
+      });
+      
+      expect(runner['command']).toBe('npx vitest run tests/unit/math.test.js');
+    });
+
+    it('should preserve custom command when testPath is provided', () => {
+      const runner = new TestRunner({
+        language: 'javascript',
+        framework: 'jest',
+        command: 'yarn test',
+        testPath: '/path/to/test.js'
+      });
+      
+      // Custom command should override default behavior
+      expect(runner['command']).toBe('yarn test');
+    });
+  });
 });

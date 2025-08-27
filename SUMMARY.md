@@ -7,8 +7,12 @@ Multi-language test failure management tool with persistent SQLite storage. Trac
 
 ### Setup
 ```bash
-tfq init                           # Initialize TFQ for current project
+tfq init                           # Initialize TFQ for current project (auto-configures Claude if available)
 tfq init --db-path ./custom.db     # Initialize with custom database path
+tfq init --with-claude             # Force Claude Code integration setup
+tfq init --skip-claude             # Skip Claude Code integration
+tfq init --interactive             # Interactive setup with Claude prompts
+tfq init --claude-path /path/to/claude  # Custom Claude executable path
 ```
 
 ### Running Tests
@@ -47,6 +51,34 @@ tfq get-groups                    # View current groups
 tfq next --group                  # Get next group of tests
 ```
 
+### Claude Code Integration
+```bash
+tfq fix-next                      # Fix next test with Claude Code
+tfq fix-all                       # Fix all tests iteratively Claude Code
+tfq fix-all --max-iterations 5    # Limit number of fixes
+tfq fix-next --test-timeout 300000  # Custom timeout (1-10 minutes: 60000-600000ms)
+```
+
+### Claude Configuration Options
+All [Claude CLI options](https://docs.anthropic.com/en/docs/claude-code/cli-reference) supported in `.tfqrc`:
+```json
+{
+  "claude": {
+    "enabled": true,
+    "dangerouslySkipPermissions": true,  // Skip prompts (dev mode)
+    "allowedTools": ["Edit", "Read"],    // Permitted tools
+    "outputFormat": "text|json",         // Output format
+    "verbose": true,                     // Detailed logging
+    "maxTurns": 5,                      // Conversation limit
+    "model": "sonnet",                  // Model selection
+    "addDir": ["/path"],                // Extra directories
+    "customArgs": ["--flags"]           // Additional CLI args
+  }
+}
+```
+
+**Quick configs:** Safe: `"allowedTools": ["Read", "Edit"]` | Dev: `"dangerouslySkipPermissions": true` | Production: `"outputFormat": "json"`
+
 ## Configuration
 
 ### Database Location
@@ -59,11 +91,12 @@ Created by `tfq init`, contains:
 - Database path
 - Auto-detected language and framework
 - Default priority and settings
+- **Claude Code integration** (if available)
 
 ## Quick Start Workflow
 
 ```bash
-# 1. Initialize for your project
+# 1. Initialize for your project (auto-configures Claude Code if available)
 tfq init
 
 # 2. Run tests and queue failures
@@ -74,8 +107,12 @@ tfq list
 
 # 4. Work through failures
 tfq next              # Get next test to fix
-# ... fix the test ...
+# ... fix the test manually ...
 tfq resolve path/to/fixed-test.js
+
+# OR: Use Claude Code to fix (if Claude configured)
+tfq fix-next          # fixes next test
+tfq fix-all           # fixes all queued tests
 
 # 5. Clear queue when done
 tfq clear

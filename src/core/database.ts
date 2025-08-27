@@ -112,6 +112,43 @@ export class TestDatabase {
     return transaction();
   }
 
+  dequeueWithContext(): QueueItem | null {
+    const transaction = this.db.transaction(() => {
+      const row = this.db.prepare(`
+        SELECT 
+          id,
+          file_path as filePath,
+          priority,
+          created_at as createdAt,
+          failure_count as failureCount,
+          last_failure as lastFailure,
+          error,
+          group_id as groupId,
+          group_type as groupType,
+          group_order as groupOrder
+        FROM failed_tests 
+        ORDER BY priority DESC, created_at ASC 
+        LIMIT 1
+      `).get() as any;
+
+      if (row) {
+        this.db.prepare('DELETE FROM failed_tests WHERE file_path = ?').run(row.filePath);
+        return {
+          ...row,
+          createdAt: new Date(row.createdAt),
+          lastFailure: new Date(row.lastFailure),
+          error: row.error || undefined,
+          groupId: row.groupId || undefined,
+          groupType: row.groupType || undefined,
+          groupOrder: row.groupOrder || undefined
+        };
+      }
+      return null;
+    });
+
+    return transaction();
+  }
+
   peek(): string | null {
     const row = this.db.prepare(`
       SELECT file_path FROM failed_tests 

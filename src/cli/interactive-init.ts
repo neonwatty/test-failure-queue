@@ -114,6 +114,60 @@ export async function interactiveInit(
       }
     }
 
+    // Claude integration setup
+    console.log('\n' + chalk.bold('🤖 Claude Code Integration'));
+    console.log(chalk.gray('Claude Code can automatically fix failing tests for you.\n'));
+
+    const enableClaude = await confirm(
+      'Enable Claude Code integration for automated test fixing?',
+      false  // Default to false to be safe
+    );
+
+    let claudeConfig = undefined;
+    if (enableClaude) {
+      try {
+        // Detect Claude availability
+        const { ClaudeConfigManager } = await import('../services/claude/config.js');
+        const claudeManager = new ClaudeConfigManager();
+        const detectedPath = claudeManager.detectClaudePath();
+        
+        if (detectedPath) {
+          console.log(chalk.green('✓'), 'Found Claude at:', chalk.cyan(detectedPath));
+        } else {
+          console.log(chalk.yellow('⚠️'), 'Claude Code CLI not found at standard locations');
+          console.log(chalk.gray('You can install it from: https://claude.ai/code'));
+        }
+        
+        const claudePath = await question(
+          'Claude executable path (leave empty for auto-detection)',
+          detectedPath || ''
+        );
+        
+        const maxIterations = parseInt(await question(
+          'Max iterations for fix-all command',
+          '10'
+        ), 10) || 10;
+        
+        const testTimeout = parseInt(await question(
+          'Timeout per test fix (milliseconds)',
+          '300000'
+        ), 10) || 300000;
+        
+        claudeConfig = {
+          enabled: true,
+          maxIterations,
+          testTimeout,
+          prompt: "Fix the syntax and logic errors in this test file and return only the corrected code",
+          ...(claudePath && { claudePath })
+        };
+        
+        console.log(chalk.green('✓'), 'Claude integration configured');
+      } catch (error) {
+        console.log(chalk.red('❌'), 'Failed to configure Claude integration:', (error as Error).message);
+        console.log(chalk.gray('Continuing without Claude integration...'));
+      }
+    }
+
     // Build configuration
     const config: TfqConfig = {
       database: { path: dbPath },
@@ -131,6 +185,10 @@ export async function interactiveInit(
     if (workspaces && Object.keys(workspaces).length > 0) {
       config.workspaces = workspaces;
       config.workspaceDefaults = { autoAdd, parallel };
+    }
+
+    if (claudeConfig) {
+      config.claude = claudeConfig;
     }
 
     // Preview configuration

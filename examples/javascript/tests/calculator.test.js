@@ -66,5 +66,4 @@ describe('Calculator', () => {
       expect(calculator.factorial(10)).toBe(3628800);
     });
   });
-
 });

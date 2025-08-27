@@ -1,13 +1,13 @@
 # TFQ (Test Failure Queue)
 
-A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.  Easily integates with agentic tools like Claude Code for context-managed test fixing.
+TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across Javascript / Typscript, Python, and Ruby test frameworks.  It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
+
+TFQ optionally integates with Claude Code for precise context-engineered agentic assistance for test fixing.
 
 ## Table of Contents
-- [Overview](#overview)
-- [Essential Commands](#essential-commands)
 - [How It Works](#how-it-works)
-- [Features](#features)
 - [Installation](#installation)
+- [Essential Commands](#essential-commands)
 - [Supported Languages](#supported-languages)
 - [Usage](#usage)
   - [CLI Commands](#cli-commands)
@@ -19,21 +19,6 @@ A multi-language test failure management tool with persistent SQLite storage, su
 - [Development](#development)
 - [Contributing](#contributing)
 
-## Overview
-
-TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across multiple programming languages and test frameworks.  It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
-
-## Essential Commands
-
-| Command | What it does |
-|---------|--------------|
-| `tfq init` | Initialize TFQ for your project |
-| `tfq run-tests --auto-add` | Run tests and queue failures |
-| `tfq list` | View queued test failures |
-| `tfq count` | Get the number of items in queue |
-| `tfq stats` | Show queue statistics |
-| `tfq clear` | Clear the queue |
-| `tfq --help` | Show all commands |
 
 ## How It Works
 
@@ -48,6 +33,7 @@ Analyzing project at: /path/to/your/project
 
 ✓ Detected language: javascript
 ✓ Detected framework: vitest
+✓ Found Claude at: /Users/username/.claude/local/claude
 
 ✓ TFQ initialized successfully!
 
@@ -57,11 +43,13 @@ Detected:
   Language: javascript
   Framework: vitest
   Database: ./.tfq/tfq.db
+  Claude Code: Enabled (auto-detected)
 
 Next steps:
   1. Run your tests: tfq run-tests --auto-detect --auto-add
   2. View queued failures: tfq list
   3. Get next test to fix: tfq next
+  4. Fix tests with Claude Code: tfq fix-next or tfq fix-all
 ```
 
 #### Step 1: Run Tests to Discover Failures
@@ -120,35 +108,6 @@ $ tfq next
 src/api/auth.test.js [P5]
 ```
 
-### Key Points
-
-1. **Priority Queue**: Higher priority tests are dequeued first
-2. **Persistent Storage**: Queue persists across sessions
-3. **Language Agnostic**: Works with JavaScript, Python, Ruby, and their test frameworks
-4. **Pattern Matching**: Support for glob patterns to manage multiple files
-5. **Cross-Project**: Can manage test queues for multiple projects
-
-
-## Features
-
-### Core Features
-- **Multi-Language Support**: JavaScript/TypeScript, Python, and Ruby
-- **Multiple Test Frameworks**: 
-  - JavaScript: Jest, Mocha, Vitest, Jasmine, AVA
-  - Python: pytest, unittest
-  - Ruby: Minitest, RSpec
-- **Auto-Detection**: Automatically detects language and test framework with improved error messages
-- **Persistent Storage**: SQLite with WAL mode for better concurrent access
-- **Priority Management**: Assign priorities to different test files
-- **Pattern Matching**: Support for glob patterns to manage multiple files at once
-- **Failure Tracking**: Automatically tracks failure counts and timestamps
-- **Multiple Output Formats**: JSON output for programmatic usage
-- **Cross-Project Support**: Manage test queues for multiple projects
-- **Intelligent Test Grouping**: Organize tests for parallel or sequential execution
-- **Execution Optimization**: Run independent tests in parallel for 40-60% faster execution
-- **Config Validation**: Validates configuration before saving to prevent errors
-- **Claude Code Integration**: Works seamlessly with Claude Code for AI-powered test fixing (see CLAUDE.md)
-
 ## Installation
 
 ```bash
@@ -177,6 +136,17 @@ This command will:
 
 **Note:** If you install TFQ globally, each project should run `tfq init` to create its own database. Without initialization, all projects would share the same global database at `~/.tfq/tfq.db`.
 
+## Essential Commands
+
+| Command | What it does |
+|---------|--------------|
+| `tfq init` | Initialize TFQ for your project |
+| `tfq run-tests --auto-add` | Run tests and queue failures |
+| `tfq list` | View queued test failures |
+| `tfq count` | Get the number of items in queue |
+| `tfq stats` | Show queue statistics |
+| `tfq clear` | Clear the queue |
+| `tfq --help` | Show all commands |
 
 ## Supported Languages
 
@@ -202,14 +172,23 @@ This command will:
 
 #### Initialize TFQ for your project
 ```bash
-# Basic initialization with auto-detection
+# Basic initialization with auto-detection (includes Claude integration if available)
 tfq init
 
-# Interactive setup mode
+# Interactive setup mode (asks about Claude integration)
 tfq init --interactive
 
 # Initialize with custom database path
 tfq init --db-path ./custom/path.db
+
+# Force Claude Code integration setup
+tfq init --with-claude
+
+# Skip Claude Code integration setup
+tfq init --skip-claude
+
+# Custom Claude executable path
+tfq init --claude-path /path/to/claude
 
 # Initialize for CI environment
 tfq init --ci
@@ -231,10 +210,14 @@ The `init` command creates a `.tfqrc` configuration file with:
 - Project-specific database location (default: `./.tfq/tfq.db`)
 - Auto-detected language and test framework
 - Default settings for test execution
+- **Claude Code integration** (auto-detected if available)
 
 **Options:**
 - `--db-path <path>`: Custom database location
-- `--interactive`: Step-by-step configuration wizard
+- `--interactive`: Step-by-step configuration wizard (includes Claude setup prompts)
+- `--with-claude`: Force Claude Code integration setup
+- `--skip-claude`: Skip Claude Code integration entirely
+- `--claude-path <path>`: Custom Claude executable path
 - `--ci`: Use CI-friendly settings (temp database)
 - `--shared`: Create team-shared configuration
 - `--workspace-mode`: Configure for monorepo
@@ -309,7 +292,7 @@ tfq stats --json
 
 ### Test Grouping
 
-TFQ now supports intelligent test grouping for optimized execution, enabling parallel processing of independent tests and sequential execution of dependent tests.
+TFQ supports test grouping for optimized execution, enabling parallel processing of independent tests and sequential execution of dependent tests.
 
 #### Set execution groups
 ```bash
@@ -454,7 +437,48 @@ const config = new ConfigManager();
 
 ## Claude Code Integration
 
-TFQ integrates seamlessly with Claude Code for AI-powered test fixing. Custom slash commands are provided in the `commands/` directory:
+TFQ integrates seamlessly with Claude Code for AI-powered test fixing.
+
+### Automatic Setup
+When you run `tfq init`, TFQ automatically detects if Claude Code is installed and configures the integration:
+
+```bash
+$ tfq init
+✓ Found Claude at: /Users/username/.claude/local/claude
+✓ Claude Code integration enabled automatically
+```
+
+### Manual Control
+```bash
+# Force Claude integration setup
+tfq init --with-claude
+
+# Skip Claude integration
+tfq init --skip-claude
+
+# Use custom Claude path
+tfq init --claude-path /custom/path/to/claude
+
+# Interactive setup with Claude prompts
+tfq init --interactive
+```
+
+### Agentic Test Fixing Commands
+Once configured, you can use these commands for automated test fixing:
+
+```bash
+# Fix the next test in queue with AI
+tfq fix-next
+
+# Fix all tests iteratively with AI  
+tfq fix-all --max-iterations 10
+
+# Fix with custom timeout (1-10 minutes allowed)
+tfq fix-next --test-timeout 600000
+```
+
+### Example Claude Code Slash Commands
+Examples of custom slash commands are also provided in the `commands/` directory for agentic use of the `tfq` cli:
 
 - **`/tfq-run`** - Discovers and queues failing tests
 - **`/tfq-fix-next`** - Fixes the next test in queue using a Task agent
@@ -462,6 +486,69 @@ TFQ integrates seamlessly with Claude Code for AI-powered test fixing. Custom sl
 - **`/tfq-reset`** - Clears the queue for a fresh start
 
 These commands leverage Claude Code's Task agents and tools (Bash, Read, Edit) to automatically understand and fix test failures. See `CLAUDE.md` for detailed integration documentation and `plans/slash-commands/` for implementation details.
+
+### Claude CLI Configuration
+
+TFQ supports all Claude Code CLI options through `.tfqrc` configuration. These options directly correspond to the [Claude Code CLI flags](https://docs.anthropic.com/en/docs/claude-code/cli-reference). Add any of these options to the `claude` section:
+
+```json
+{
+  "claude": {
+    "enabled": true,
+    "claudePath": "/path/to/claude",
+    "maxIterations": 10,
+    "testTimeout": 300000,  // 1-10 minutes (60000-600000ms)
+    
+    // Security & Permissions
+    "dangerouslySkipPermissions": true,     // Skip permission prompts (dev mode)
+    "allowedTools": ["Edit", "Read", "Write"], // Allowed tools without prompts
+    "disallowedTools": ["Bash"],            // Explicitly denied tools
+    "permissionMode": "plan",               // Permission handling mode
+    
+    // Output & Behavior  
+    "outputFormat": "text",                 // text|json|stream-json
+    "verbose": true,                        // Enable detailed logging
+    "maxTurns": 5,                         // Limit conversation turns
+    "model": "sonnet",                     // sonnet|opus|full-model-name
+    
+    // Advanced Options
+    "addDir": ["/extra/working/dir"],      // Additional working directories
+    "appendSystemPrompt": "Be concise.",   // Append to system prompt
+    "continueSession": true,               // Resume most recent conversation
+    "customArgs": ["--future-flag"]        // Any additional CLI arguments
+  }
+}
+```
+
+**Common configurations:**
+
+**Safe (default):** Prompts for permissions, limited tools
+```json
+"claude": {
+  "enabled": true,
+  "allowedTools": ["Read", "Edit"],
+  "verbose": true
+}
+```
+
+**Development:** Skip permissions for faster iteration
+```json
+"claude": {
+  "enabled": true, 
+  "dangerouslySkipPermissions": true,
+  "verbose": true
+}
+```
+
+**Production:** Restricted tools, structured output
+```json
+"claude": {
+  "enabled": true,
+  "allowedTools": ["Read"],
+  "disallowedTools": ["Bash"],
+  "outputFormat": "json"
+}
+```
 
 ## Configuration
 

@@ -186,8 +186,8 @@ describe('InitService', () => {
   });
 
   describe('generateDefaultConfig', () => {
-    it('should generate config with detected language and framework', () => {
-      const config = service.generateDefaultConfig({
+    it('should generate config with detected language and framework', async () => {
+      const config = await service.generateDefaultConfig({
         language: 'javascript',
         framework: 'vitest',
         projectPath: tempDir
@@ -200,8 +200,8 @@ describe('InitService', () => {
       expect(config.defaults?.parallel).toBe(4);
     });
 
-    it('should generate CI config when ci flag is set', () => {
-      const config = service.generateDefaultConfig({
+    it('should generate CI config when ci flag is set', async () => {
+      const config = await service.generateDefaultConfig({
         language: 'python',
         framework: 'pytest',
         ci: true,
@@ -211,8 +211,8 @@ describe('InitService', () => {
       expect(config.database?.path).toBe('/tmp/tfq-tfq.db');
     });
 
-    it('should generate shared config when shared flag is set', () => {
-      const config = service.generateDefaultConfig({
+    it('should generate shared config when shared flag is set', async () => {
+      const config = await service.generateDefaultConfig({
         language: null,
         framework: null,
         shared: true,
@@ -222,7 +222,7 @@ describe('InitService', () => {
       expect(config.database?.path).toBe('./.tfq/shared-tfq.db');
     });
 
-    it('should generate workspace config when workspaceMode is enabled', () => {
+    it('should generate workspace config when workspaceMode is enabled', async () => {
       // Mock workspace detection
       vi.mocked(fs.existsSync).mockImplementation((p) => {
         if (p.toString().endsWith('package.json')) return true;
@@ -239,7 +239,7 @@ describe('InitService', () => {
         return '';
       });
       
-      const config = service.generateDefaultConfig({
+      const config = await service.generateDefaultConfig({
         language: 'javascript',
         framework: 'jest',
         workspaceMode: true,
@@ -250,6 +250,31 @@ describe('InitService', () => {
       expect(config.workspaces?.['packages/app']).toBe('./.tfq/app-tfq.db');
       expect(config.workspaces?.['packages/lib']).toBe('./.tfq/lib-tfq.db');
       expect(config.workspaceDefaults).toBeDefined();
+    });
+
+    it('should skip Claude configuration when skipClaude is true', async () => {
+      const config = await service.generateDefaultConfig({
+        language: 'javascript',
+        framework: 'vitest',
+        skipClaude: true,
+        projectPath: tempDir
+      });
+      
+      expect(config.claude).toBeUndefined();
+    });
+
+    it('should handle Claude service import errors gracefully', async () => {
+      // This test ensures the service doesn't crash if Claude service is not available
+      const config = await service.generateDefaultConfig({
+        language: 'javascript',
+        framework: 'vitest',
+        withClaude: true,
+        projectPath: tempDir
+      });
+      
+      // Should not crash, and may or may not have Claude config depending on availability
+      expect(config).toBeDefined();
+      expect(config.language).toBe('javascript');
     });
   });
 
