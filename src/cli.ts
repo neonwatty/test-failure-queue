@@ -972,49 +972,7 @@ program
         options.claudePath
       );
       
-      // Check if Claude is available
-      if (!claudeService.isEnabled()) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ 
-            success: false, 
-            error: 'Claude integration is disabled. Enable it in your .tfqrc config file.' 
-          }));
-        } else {
-          console.error(chalk.red('Error:'), 'Claude integration is disabled.');
-          console.error('Enable it in your .tfqrc config file by setting claude.enabled: true');
-        }
-        process.exit(1);
-      }
-      
-      const validation = claudeService.validateConfiguration();
-      if (!validation.isValid) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ success: false, error: validation.error }));
-        } else {
-          console.error(chalk.red('Error:'), validation.error);
-        }
-        process.exit(1);
-      }
-      
-      // Get next test from queue
-      const nextResult = queue.dequeue();
-      if (!nextResult) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ success: false, message: 'Queue is empty' }));
-        } else {
-          console.log(chalk.yellow('Queue is empty'));
-        }
-        process.exit(1);
-      }
-      
-      if (!useJsonOutput(options)) {
-        console.log(chalk.blue('🤖 Fixing test with Claude...'));
-        console.log(chalk.gray(`Test: ${nextResult}`));
-        console.log(chalk.gray(`Claude path: ${validation.claudePath}`));
-        console.log();
-      }
-      
-      // Apply timeout override if provided
+      // Validate test timeout if provided
       if (options.testTimeout) {
         const timeout = parseInt(options.testTimeout, 10);
         if (isNaN(timeout) || timeout < 1000) {
@@ -1026,39 +984,54 @@ program
           }
           process.exit(1);
         }
-        
-        // Create a new service instance with the timeout override
-        const config = claudeService.getConfig();
-        config.testTimeout = timeout;
       }
       
-      const startTime = Date.now();
+      // Use the shared fixNextTest method
+      const result = await claudeService.fixNextTest(queue, {
+        testTimeout: options.testTimeout ? parseInt(options.testTimeout, 10) : undefined,
+        configPath: program.opts().config,
+        useJsonOutput: useJsonOutput(options)
+      });
       
-      // Get error context from queue if available
-      const queueItems = queue.list();
-      const testItem = queueItems.find(item => item.filePath === nextResult);
-      const errorContext = testItem?.error;
-      
-      // Fix the test
-      const fixResult = await claudeService.fixTest(nextResult, errorContext);
+      // Handle case where no test was found
+      if (!result.testFound) {
+        if (useJsonOutput(options)) {
+          console.log(JSON.stringify({ success: false, message: result.finalError || 'Queue is empty' }));
+        } else {
+          console.log(chalk.yellow(result.finalError || 'Queue is empty'));
+        }
+        process.exit(1);
+      }
       
       if (useJsonOutput(options)) {
         console.log(JSON.stringify({
-          success: fixResult.success,
-          testPath: nextResult,
-          duration: fixResult.duration,
-          error: fixResult.error,
-          claudePath: validation.claudePath
+          success: result.success,
+          testPath: result.testPath,
+          claudeProcessing: result.claudeProcessing,
+          verification: result.verification,
+          finalError: result.finalError,
+          claudePath: claudeService.getClaudePath()
         }));
       } else {
-        if (fixResult.success) {
+        // Show Claude processing result
+        if (result.claudeProcessing?.success) {
           console.log(chalk.green('✅ Claude processing completed'));
-          console.log(chalk.gray(`Test: ${nextResult}`));
-          console.log(chalk.gray(`Duration: ${fixResult.duration}ms`));
         } else {
           console.log(chalk.red('❌ Claude processing failed'));
-          console.log(chalk.red(`Error: ${fixResult.error}`));
-          console.log(chalk.gray(`Duration: ${fixResult.duration}ms`));
+          console.log(chalk.red(`Error: ${result.claudeProcessing?.error}`));
+        }
+        console.log(chalk.gray(`Test: ${result.testPath}`));
+        console.log(chalk.gray(`Claude duration: ${result.claudeProcessing?.duration}ms`));
+        
+        // Show final result
+        console.log();
+        if (result.success) {
+          console.log(chalk.green.bold('🎉 Test successfully fixed and verified!'));
+        } else {
+          console.log(chalk.red.bold('❌ Fix attempt unsuccessful'));
+          if (result.finalError) {
+            console.log(chalk.red(`Final error: ${result.finalError}`));
+          }
         }
         
         // Show remaining queue stats
@@ -1067,7 +1040,7 @@ program
         console.log(chalk.cyan(`Queue: ${stats.totalItems} remaining tests`));
       }
       
-      process.exit(fixResult.success ? 0 : 1);
+      process.exit(result.success ? 0 : 1);
     } catch (error: any) {
       if (useJsonOutput(options)) {
         console.log(JSON.stringify({ success: false, error: error.message }));
@@ -1108,37 +1081,7 @@ program
         options.claudePath
       );
       
-      // Check if Claude is available
-      if (!claudeService.isEnabled()) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ 
-            success: false, 
-            error: 'Claude integration is disabled. Enable it in your .tfqrc config file.' 
-          }));
-        } else {
-          console.error(chalk.red('Error:'), 'Claude integration is disabled.');
-          console.error('Enable it in your .tfqrc config file by setting claude.enabled: true');
-        }
-        process.exit(1);
-      }
-      
-      const validation = claudeService.validateConfiguration();
-      if (!validation.isValid) {
-        if (useJsonOutput(options)) {
-          console.log(JSON.stringify({ success: false, error: validation.error }));
-        } else {
-          console.error(chalk.red('Error:'), validation.error);
-        }
-        process.exit(1);
-      }
-      
-      if (!useJsonOutput(options)) {
-        console.log(chalk.bold.cyan('🚀 TFQ Automated Test Fixer with Claude'));
-        console.log(chalk.dim('=' .repeat(50)));
-        console.log();
-      }
-      
-      // Apply timeout override if provided
+      // Validate test timeout if provided
       if (options.testTimeout) {
         const timeout = parseInt(options.testTimeout, 10);
         if (isNaN(timeout) || timeout < 1000) {
@@ -1150,9 +1093,12 @@ program
           }
           process.exit(1);
         }
-        
-        const config = claudeService.getConfig();
-        config.testTimeout = timeout;
+      }
+      
+      if (!useJsonOutput(options)) {
+        console.log(chalk.bold.cyan('🚀 TFQ Automated Test Fixer with Claude'));
+        console.log(chalk.dim('=' .repeat(50)));
+        console.log();
       }
       
       const result = {
@@ -1165,155 +1111,150 @@ program
       };
       
       try {
-        // Step 1: Clear queue and discover test failures
-        if (!useJsonOutput(options)) {
-          console.log(chalk.blue.bold('🔄 Step 1: Clearing queue and discovering test failures...'));
-        }
+        // Check initial queue size
+        const initialQueueSize = queue.size();
         
-        queue.clear();
-        if (!useJsonOutput(options)) {
-          console.log(chalk.green('✅ Queue cleared'));
-        }
-        
-        // Run tests and add failures to queue
-        try {
-          const runner = new TestRunner({
-            verbose: false,
-            configPath: program.opts().config
-          });
+        // If queue is empty, run tests to populate it
+        if (initialQueueSize === 0) {
+          if (!useJsonOutput(options)) {
+            console.log(chalk.blue.bold('🔄 Queue is empty. Running tests to discover failures...'));
+          }
           
-          const testResult = runner.run();
-          
-          if (testResult.failingTests.length > 0) {
-            testResult.failingTests.forEach(test => {
-              const absolutePath = path.resolve(test);
-              queue.enqueue(absolutePath, 0, testResult.stderr || testResult.stdout);
+          try {
+            const runner = new TestRunner({
+              verbose: false,
+              configPath: program.opts().config
             });
             
-            if (!useJsonOutput(options)) {
-              console.log(chalk.green('✅ Tests run and failures added to queue'));
-            }
-          } else if (!testResult.success) {
-            if (!useJsonOutput(options)) {
-              console.log(chalk.yellow('⚠️  Test command failed but no specific test failures found'));
-              console.log(chalk.gray(`Error: ${testResult.error}`));
-            }
-          } else {
-            if (!useJsonOutput(options)) {
-              console.log(chalk.green('✅ All tests already passing!'));
-            }
-            result.allTestsPass = true;
+            const testResult = runner.run();
             
-            if (useJsonOutput(options)) {
-              console.log(JSON.stringify(result));
+            if (testResult.failingTests.length > 0) {
+              testResult.failingTests.forEach(test => {
+                const absolutePath = path.resolve(test);
+                queue.enqueue(absolutePath, 0, testResult.stderr || testResult.stdout);
+              });
+              
+              if (!useJsonOutput(options)) {
+                console.log(chalk.green(`✅ Added ${testResult.failingTests.length} failing tests to queue`));
+              }
+            } else if (testResult.success) {
+              if (!useJsonOutput(options)) {
+                console.log(chalk.green('✅ All tests already passing!'));
+              }
+              result.allTestsPass = true;
+              
+              if (useJsonOutput(options)) {
+                console.log(JSON.stringify(result));
+              } else {
+                console.log();
+                console.log(chalk.green.bold('🎉 All tests are already passing!'));
+              }
+              return;
+            } else {
+              if (!useJsonOutput(options)) {
+                console.log(chalk.yellow('⚠️ Test command failed but no specific test failures found'));
+                console.log(chalk.gray(`Error: ${testResult.error}`));
+              }
             }
-            return;
+          } catch (error: any) {
+            if (!useJsonOutput(options)) {
+              console.log(chalk.red('❌ Failed to run tests:'), error.message);
+            }
           }
-        } catch (error: any) {
+        } else {
           if (!useJsonOutput(options)) {
-            console.log(chalk.red('❌ Failed to run tests:'), error.message);
+            console.log(chalk.blue(`📋 Found ${initialQueueSize} tests in queue`));
           }
         }
         
-        const failedTests = queue.list();
-        result.totalTests = failedTests.length;
+        const startingQueueSize = queue.size();
+        result.totalTests = startingQueueSize;
         
         if (result.totalTests === 0) {
           if (!useJsonOutput(options)) {
-            console.log(chalk.green('📊 No failed tests found in queue'));
+            console.log(chalk.green('📊 No failed tests found'));
           }
           result.allTestsPass = true;
           
           if (useJsonOutput(options)) {
             console.log(JSON.stringify(result));
+          } else {
+            console.log();
+            console.log(chalk.green.bold('🎉 No tests need fixing!'));
           }
           return;
         }
         
         if (!useJsonOutput(options)) {
-          console.log(chalk.yellow(`📊 Found ${result.totalTests} failed tests`));
-          console.log(chalk.blue.bold('\n🔧 Step 2: Fixing tests iteratively...'));
+          console.log(chalk.blue.bold(`\n🔧 Starting to fix ${result.totalTests} tests iteratively...`));
         }
         
-        // Step 2: Iterative fixing
-        for (let i = 0; i < maxIterations && result.iterations < result.totalTests; i++) {
-          const nextTest = queue.dequeue();
-          if (!nextTest) {
+        // Iterative fixing using the shared method
+        for (let i = 0; i < maxIterations; i++) {
+          // Check if queue is empty
+          if (queue.size() === 0) {
             if (!useJsonOutput(options)) {
-              console.log(chalk.green('🎯 Queue empty, all tests processed'));
+              console.log(chalk.green('🎯 Queue empty - all tests processed'));
             }
+            result.allTestsPass = true;
             break;
           }
           
           result.iterations++;
           
           if (!useJsonOutput(options)) {
-            console.log(chalk.cyan(`\n🧪 [${result.iterations}/${result.totalTests}] Fixing: ${nextTest}`));
+            console.log(chalk.cyan(`\n🧪 [${result.iterations}/${maxIterations}] Processing next test...`));
           }
           
-          try {
-            // Get error context
-            const testItem = failedTests.find(item => item.filePath === nextTest);
-            const errorContext = testItem?.error;
-            
-            const fixResult = await claudeService.fixTest(nextTest, errorContext);
-            
-            if (fixResult.success) {
-              if (!useJsonOutput(options)) {
-                console.log(chalk.green(`✅ Claude processing completed for ${nextTest}`));
-              }
-              result.fixedTests++;
-            } else {
-              if (!useJsonOutput(options)) {
-                console.log(chalk.red(`❌ Failed to fix test: ${fixResult.error}`));
-              }
-              result.failedFixes++;
-            }
-          } catch (error: any) {
-            if (!useJsonOutput(options)) {
-              console.log(chalk.red(`❌ Failed to fix test: ${error.message}`));
-            }
-            result.failedFixes++;
-          }
-        }
-        
-        if (result.iterations >= maxIterations) {
-          result.skippedTests = result.totalTests - result.iterations;
-          if (!useJsonOutput(options)) {
-            console.log(chalk.yellow(`⚠️  Reached max iterations (${maxIterations}), ${result.skippedTests} tests skipped`));
-          }
-        }
-        
-        // Step 3: Final verification
-        if (!useJsonOutput(options)) {
-          console.log(chalk.blue.bold('\n🔍 Step 3: Final verification...'));
-        }
-        
-        try {
-          const runner = new TestRunner({
-            verbose: false,
-            configPath: program.opts().config
+          // Use the shared fixNextTest method
+          const fixResult = await claudeService.fixNextTest(queue, {
+            testTimeout: options.testTimeout ? parseInt(options.testTimeout, 10) : undefined,
+            configPath: program.opts().config,
+            useJsonOutput: false // Let fix-all handle its own output
           });
           
-          const verifyResult = runner.run();
-          result.allTestsPass = verifyResult.success;
-          
-          if (result.allTestsPass) {
-            queue.clear();
+          if (!fixResult.testFound) {
+            // No more tests in queue
             if (!useJsonOutput(options)) {
-              console.log(chalk.green.bold('🎉 All tests pass! Queue cleared.'));
+              console.log(chalk.green('🎯 No more tests in queue'));
+            }
+            result.allTestsPass = true;
+            break;
+          }
+          
+          if (fixResult.success) {
+            result.fixedTests++;
+            if (!useJsonOutput(options)) {
+              console.log(chalk.green(`✅ Successfully fixed: ${fixResult.testPath}`));
             }
           } else {
+            result.failedFixes++;
             if (!useJsonOutput(options)) {
-              console.log(chalk.yellow('⚠️  Some tests still failing'));
+              console.log(chalk.red(`❌ Failed to fix: ${fixResult.testPath}`));
+              if (fixResult.finalError) {
+                console.log(chalk.gray(`   Error: ${fixResult.finalError}`));
+              }
             }
           }
-        } catch (error: any) {
-          result.allTestsPass = false;
+          
+          // Show current queue status
           if (!useJsonOutput(options)) {
-            console.log(chalk.red('❌ Verification failed'));
+            const remainingTests = queue.size();
+            console.log(chalk.gray(`   Queue: ${remainingTests} tests remaining`));
           }
         }
+        
+        // Check if we hit max iterations
+        if (result.iterations >= maxIterations && queue.size() > 0) {
+          result.skippedTests = queue.size();
+          if (!useJsonOutput(options)) {
+            console.log(chalk.yellow(`\n⚠️ Reached max iterations (${maxIterations}), ${result.skippedTests} tests remain in queue`));
+          }
+        }
+        
+        // Final status check
+        const finalQueueSize = queue.size();
+        result.allTestsPass = finalQueueSize === 0;
         
       } catch (error: any) {
         if (!useJsonOutput(options)) {
@@ -1331,18 +1272,19 @@ program
       } else {
         console.log();
         console.log(chalk.bold.cyan('📊 Final Results:'));
-        console.log(chalk.white(`Total tests processed: ${result.totalTests}`));
+        console.log(chalk.white(`Total tests encountered: ${result.totalTests}`));
         console.log(chalk.green(`Successfully fixed: ${result.fixedTests}`));
         console.log(chalk.red(`Failed to fix: ${result.failedFixes}`));
-        console.log(chalk.yellow(`Skipped tests: ${result.skippedTests}`));
+        console.log(chalk.yellow(`Tests remaining in queue: ${queue.size()}`));
         console.log(chalk.white(`Iterations completed: ${result.iterations}`));
-        console.log(chalk.white(`All tests passing: ${result.allTestsPass ? '✅ YES' : '❌ NO'}`));
+        console.log(chalk.white(`All tests resolved: ${result.allTestsPass ? '✅ YES' : '❌ NO'}`));
         
         console.log();
         if (result.allTestsPass) {
-          console.log(chalk.green.bold('🎉 All tests are now passing!'));
+          console.log(chalk.green.bold('🎉 All tests have been resolved!'));
         } else {
-          console.log(chalk.yellow.bold('⚠️  Some tests may still need attention'));
+          console.log(chalk.yellow.bold('⚠️ Some tests may still need attention'));
+          console.log(chalk.gray('Run "tfq list" to see remaining tests or "tfq fix-all" again to continue'));
         }
       }
       

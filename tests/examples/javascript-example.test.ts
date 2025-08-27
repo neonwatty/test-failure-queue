@@ -35,9 +35,9 @@ describe('JavaScript Example (Jest)', () => {
     expect(result.framework).toBe('jest');
     expect(result.failingTests.length).toBeGreaterThanOrEqual(1);
     
-    // Check that at least one failing test file is detected
+    // Check that the calculator.test.js file is failing (advanced.test.js expects the buggy behavior so passes)
     const failingFiles = result.failingTests.map((f: string) => path.basename(f));
-    expect(failingFiles).toContain('advanced.test.js');
+    expect(failingFiles).toContain('calculator.test.js');
   });
 
   it('should auto-detect Jest framework', () => {

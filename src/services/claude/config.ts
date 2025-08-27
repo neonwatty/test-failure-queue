@@ -12,7 +12,7 @@ export class ClaudeConfigManager {
       enabled: false,
       maxIterations: 20,
       testTimeout: 420000,
-      prompt: 'run the failed test file {filePath} and debug any errors you encounter one at a time'
+      prompt: 'Run the test file at {testFilePath} and debug any errors you encounter one at a time. Then run the test again to verify that your changes have fixed any errors.'
     };
     
     // Deep merge the provided config with defaults
@@ -340,7 +340,7 @@ export class ClaudeConfigManager {
       enabled: false,
       maxIterations: 20,
       testTimeout: 420000,
-      prompt: 'run the failed test file {filePath} and debug any errors you encounter one at a time'
+      prompt: 'Run the test file at {testFilePath} and debug any errors you encounter one at a time. Then run the test again to verify that your changes have fixed any errors.'
     };
   }
 }

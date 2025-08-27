@@ -207,4 +207,63 @@ describe('TestFailureQueue', () => {
       expect(stats.newestItem).toBeNull();
     });
   });
+
+  describe('dequeueWithContext', () => {
+    it('should return queue item with all context information', () => {
+      const errorContext = 'Test failed with assertion error';
+      queue.enqueue('test.js', 5, errorContext);
+      
+      const item = queue.dequeueWithContext();
+      
+      expect(item).not.toBeNull();
+      expect(item!.filePath).toBe('test.js');
+      expect(item!.priority).toBe(5);
+      expect(item!.error).toBe(errorContext);
+      expect(item!.failureCount).toBe(1);
+      expect(item!.createdAt).toBeInstanceOf(Date);
+      expect(item!.lastFailure).toBeInstanceOf(Date);
+    });
+
+    it('should return null for empty queue', () => {
+      const item = queue.dequeueWithContext();
+      expect(item).toBeNull();
+    });
+
+    it('should remove item from queue after dequeuing', () => {
+      queue.enqueue('test1.js');
+      queue.enqueue('test2.js');
+      
+      expect(queue.size()).toBe(2);
+      
+      const item = queue.dequeueWithContext();
+      expect(item!.filePath).toBe('test1.js');
+      expect(queue.size()).toBe(1);
+      
+      const remaining = queue.list();
+      expect(remaining[0].filePath).toBe('test2.js');
+    });
+
+    it('should respect priority order when dequeuing with context', () => {
+      queue.enqueue('low.js', 1, 'Low priority error');
+      queue.enqueue('high.js', 10, 'High priority error');
+      queue.enqueue('medium.js', 5, 'Medium priority error');
+      
+      const firstItem = queue.dequeueWithContext();
+      expect(firstItem!.filePath).toBe('high.js');
+      expect(firstItem!.priority).toBe(10);
+      expect(firstItem!.error).toBe('High priority error');
+      
+      const secondItem = queue.dequeueWithContext();
+      expect(secondItem!.filePath).toBe('medium.js');
+      expect(secondItem!.priority).toBe(5);
+    });
+
+    it('should handle items with no error context', () => {
+      queue.enqueue('test.js', 0); // No error context
+      
+      const item = queue.dequeueWithContext();
+      expect(item!.filePath).toBe('test.js');
+      expect(item!.error).toBeUndefined();
+    });
+  });
 });

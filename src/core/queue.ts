@@ -40,6 +40,10 @@ export class TestFailureQueue {
     return this.db.dequeue();
   }
 
+  dequeueWithContext(): QueueItem | null {
+    return this.db.dequeueWithContext();
+  }
+
   peek(): string | null {
     return this.db.peek();
   }

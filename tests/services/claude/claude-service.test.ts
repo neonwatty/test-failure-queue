@@ -240,13 +240,13 @@ describe('Claude Service', () => {
         getConfig: () => ({ claude: { 
           enabled: true, 
           testTimeout: 300000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         } }),
         getClaudeConfig: () => ({ 
           enabled: true, 
           testTimeout: 300000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         }),
         getClaudePath: () => '/valid/claude/path'
@@ -264,7 +264,7 @@ describe('Claude Service', () => {
         timeout: 300000,
         env: process.env,
         buffer: false,
-        input: expect.stringContaining('Fix the syntax and logic errors in this JavaScript test file')
+        input: 'fix /path/to/test.js'
       });
     });
 
@@ -316,13 +316,13 @@ describe('Claude Service', () => {
         getConfig: () => ({ claude: { 
           enabled: true, 
           testTimeout: 300000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         } }),
         getClaudeConfig: () => ({ 
           enabled: true, 
           testTimeout: 300000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         }),
         getClaudePath: () => '/valid/claude/path'
@@ -345,13 +345,13 @@ describe('Claude Service', () => {
         getConfig: () => ({ claude: { 
           enabled: true, 
           testTimeout: 5000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         } }),
         getClaudeConfig: () => ({ 
           enabled: true, 
           testTimeout: 5000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         }),
         getClaudePath: () => '/valid/claude/path'
@@ -379,13 +379,13 @@ describe('Claude Service', () => {
         getConfig: () => ({ claude: { 
           enabled: true, 
           testTimeout: 300000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         } }),
         getClaudeConfig: () => ({ 
           enabled: true, 
           testTimeout: 300000,
-          prompt: 'fix {filePath}',
+          prompt: 'fix {testFilePath}',
           claudePath: '/valid/claude/path'
         }),
         getClaudePath: () => '/valid/claude/path'

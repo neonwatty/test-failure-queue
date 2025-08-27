@@ -4,6 +4,7 @@ export interface ClaudeConfig {
   maxIterations?: number;
   testTimeout?: number;  // Per-test timeout in ms
   prompt?: string;
+  _comment?: string;  // Helper comment for users (not used by code)
   
   // All documented CLI options
   addDir?: string[];                    // --add-dir: Additional working directories
@@ -34,4 +35,24 @@ export interface ClaudeValidationResult {
   isValid: boolean;
   error?: string;
   claudePath?: string;
+}
+
+export interface ClaudeFixNextResult {
+  success: boolean;
+  testFound: boolean;
+  testPath?: string;
+  claudeProcessing?: {
+    success: boolean;
+    duration: number;
+    error?: string;
+  };
+  verification?: {
+    success: boolean;
+    exitCode: number;
+    duration: number;
+    error?: string;
+  };
+  finalError?: string;
+  requeued?: boolean;
+  maxRetriesExceeded?: boolean;
 }

@@ -6,5 +6,6 @@ export { ClaudeConfigManager } from './config.js';
 export type { 
   ClaudeConfig, 
   ClaudeFixResult, 
-  ClaudeValidationResult 
+  ClaudeValidationResult,
+  ClaudeFixNextResult
 } from './types.js';

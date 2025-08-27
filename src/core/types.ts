@@ -78,6 +78,7 @@ export interface TestRunnerOptions {
   skipUnsupportedCheck?: boolean;
   verbose?: boolean;
   configPath?: string;  // Path to config file to use
+  testPath?: string;    // Path to specific test file to run
 }
 
 export interface TestRunResult {

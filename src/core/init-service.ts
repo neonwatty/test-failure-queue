@@ -142,7 +142,8 @@ export class InitService {
             enabled: true,
             maxIterations: 10,
             testTimeout: 300000,
-            prompt: "Fix the syntax and logic errors in this test file and return only the corrected code"
+            prompt: "Run the test file at {testFilePath} and debug any errors you encounter one at a time. Then run the test again to verify that your changes have fixed any errors.",
+            _comment: "The {testFilePath} placeholder will be replaced with the actual test file path when Claude is invoked"
           };
           
           // Set Claude path if provided or detected

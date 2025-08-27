@@ -24,7 +24,7 @@ Enable Claude integration in your `.tfqrc` file:
     "claudePath": "/Users/username/.claude/local/claude",
     "maxIterations": 20,
     "testTimeout": 420000,
-    "prompt": "run the failed test file {filePath} and debug any errors you encounter one at a time"
+    "prompt": "run the failed test file {testFilePath} and debug any errors you encounter one at a time"
   }
 }
 ```

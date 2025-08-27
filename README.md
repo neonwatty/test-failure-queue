@@ -520,6 +520,69 @@ Custom slash commands are also provided in the `commands/` directory:
 
 These commands leverage Claude Code's Task agents and tools (Bash, Read, Edit) to automatically understand and fix test failures. See `CLAUDE.md` for detailed integration documentation and `plans/slash-commands/` for implementation details.
 
+### Claude CLI Configuration
+
+TFQ supports all Claude Code CLI options through `.tfqrc` configuration. These options directly correspond to the [Claude Code CLI flags](https://docs.anthropic.com/en/docs/claude-code/cli-reference). Add any of these options to the `claude` section:
+
+```json
+{
+  "claude": {
+    "enabled": true,
+    "claudePath": "/path/to/claude",
+    "maxIterations": 10,
+    "testTimeout": 300000,
+    
+    // Security & Permissions
+    "dangerouslySkipPermissions": true,     // Skip permission prompts (dev mode)
+    "allowedTools": ["Edit", "Read", "Write"], // Allowed tools without prompts
+    "disallowedTools": ["Bash"],            // Explicitly denied tools
+    "permissionMode": "plan",               // Permission handling mode
+    
+    // Output & Behavior  
+    "outputFormat": "text",                 // text|json|stream-json
+    "verbose": true,                        // Enable detailed logging
+    "maxTurns": 5,                         // Limit conversation turns
+    "model": "sonnet",                     // sonnet|opus|full-model-name
+    
+    // Advanced Options
+    "addDir": ["/extra/working/dir"],      // Additional working directories
+    "appendSystemPrompt": "Be concise.",   // Append to system prompt
+    "continueSession": true,               // Resume most recent conversation
+    "customArgs": ["--future-flag"]        // Any additional CLI arguments
+  }
+}
+```
+
+**Common configurations:**
+
+**Safe (default):** Prompts for permissions, limited tools
+```json
+"claude": {
+  "enabled": true,
+  "allowedTools": ["Read", "Edit"],
+  "verbose": true
+}
+```
+
+**Development:** Skip permissions for faster iteration
+```json
+"claude": {
+  "enabled": true, 
+  "dangerouslySkipPermissions": true,
+  "verbose": true
+}
+```
+
+**Production:** Restricted tools, structured output
+```json
+"claude": {
+  "enabled": true,
+  "allowedTools": ["Read"],
+  "disallowedTools": ["Bash"],
+  "outputFormat": "json"
+}
+```
+
 ## Configuration
 
 The queue database is stored in your home directory by default:

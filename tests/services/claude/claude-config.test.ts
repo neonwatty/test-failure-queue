@@ -37,7 +37,7 @@ describe('Claude Service Configuration Tests', () => {
           enabled: true,
           maxIterations: 5,
           testTimeout: 10000,
-          prompt: 'Please fix this test: {filePath}',
+          prompt: 'Please fix this test: {testFilePath}',
           claudePath: '/mock/claude/path' // Prevent auto-detection
         }
       };
@@ -54,7 +54,7 @@ describe('Claude Service Configuration Tests', () => {
       expect(serviceConfig.enabled).toBe(true);
       
       // Debug what we actually got vs what we expected
-      console.log(`Expected prompt: 'Please fix this test: {filePath}'`);
+      console.log(`Expected prompt: 'Please fix this test: {testFilePath}'`);
       console.log(`Actual prompt: '${serviceConfig.prompt}'`);
       console.log(`Service config:`, JSON.stringify(serviceConfig, null, 2));
       

@@ -59,6 +59,26 @@ tfq fix-all --max-iterations 5    # Limit number of fixes
 tfq fix-next --test-timeout 300000  # Custom timeout (milliseconds)
 ```
 
+### Claude Configuration Options
+All [Claude CLI options](https://docs.anthropic.com/en/docs/claude-code/cli-reference) supported in `.tfqrc`:
+```json
+{
+  "claude": {
+    "enabled": true,
+    "dangerouslySkipPermissions": true,  // Skip prompts (dev mode)
+    "allowedTools": ["Edit", "Read"],    // Permitted tools
+    "outputFormat": "text|json",         // Output format
+    "verbose": true,                     // Detailed logging
+    "maxTurns": 5,                      // Conversation limit
+    "model": "sonnet",                  // Model selection
+    "addDir": ["/path"],                // Extra directories
+    "customArgs": ["--flags"]           // Additional CLI args
+  }
+}
+```
+
+**Quick configs:** Safe: `"allowedTools": ["Read", "Edit"]` | Dev: `"dangerouslySkipPermissions": true` | Production: `"outputFormat": "json"`
+
 ## Configuration
 
 ### Database Location

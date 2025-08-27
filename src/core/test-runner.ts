@@ -63,7 +63,7 @@ export class TestRunner {
 
     // Check for custom test command in config
     const configCommand = config.getTestCommand(this.language, this.framework);
-    this.command = options.command || configCommand || this.adapter.getTestCommand(this.framework);
+    this.command = options.command || configCommand || this.adapter.getTestCommand(this.framework, options.testPath);
   }
 
   run(): TestRunResult {

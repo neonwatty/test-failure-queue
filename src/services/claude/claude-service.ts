@@ -1,9 +1,9 @@
 import { execa } from 'execa';
-import chalk from 'chalk';
-import fs from 'fs';
-import { ClaudeConfig, ClaudeFixResult, ClaudeValidationResult } from './types.js';
+import { ClaudeConfig, ClaudeFixResult, ClaudeValidationResult, ClaudeFixNextResult } from './types.js';
 import { ClaudeConfigManager } from './config.js';
 import { ConfigManager } from '../../core/config.js';
+import { TestFailureQueue } from '../../core/queue.js';
+import { TestRunner } from '../../core/test-runner.js';
 
 export class ClaudeService {
   private config: ClaudeConfig;
@@ -77,24 +77,11 @@ export class ClaudeService {
       };
     }
     
-    // Prepare the prompt - read file content and include it directly instead of just the path
-    let prompt = this.config.prompt || 'run the failed test file {filePath} and debug any errors you encounter one at a time';
+    // Use the user's custom prompt if provided, otherwise use default
+    let prompt = this.config.prompt || 'Run the test file at {testFilePath} and debug any errors you encounter one at a time. Then run the test again to verify that your changes have fixed any errors.';
     
-    // Try to read the file content and include it in the prompt for better reliability
-    let fileContent = '';
-    try {
-      fileContent = fs.readFileSync(filePath, 'utf8');
-      prompt = `Fix the syntax and logic errors in this JavaScript test file and return only the corrected code:
-
-\`\`\`javascript
-${fileContent}
-\`\`\`
-
-Please provide only the corrected JavaScript code without any additional explanation or file writing.`;
-    } catch (error) {
-      // Fallback to original prompt with just file path
-      prompt = prompt.replace('{filePath}', filePath);
-    }
+    // Replace the {testFilePath} placeholder with the actual file path
+    prompt = prompt.replace('{testFilePath}', filePath);
     
     if (errorContext) {
       prompt += `\n\nPrevious error context:\n${errorContext}`;
@@ -157,36 +144,11 @@ Please provide only the corrected JavaScript code without any additional explana
       console.log('✅ Claude CLI process completed');
       console.log(`📄 Total output length: ${allOutput.length} characters`);
       
-      // Determine success/error and handle file writing
+      // Determine success/error based on Claude Code exit status
       let errorMessage: string | undefined;
       let success = result.exitCode === 0;
       
-      if (success && allOutput && fileContent) {
-        // Extract corrected code from Claude's response and write it back to the file
-        try {
-          const codeMatch = allOutput.match(/```javascript\s*([\s\S]*?)```/);
-          if (codeMatch && codeMatch[1]) {
-            const correctedCode = codeMatch[1].trim();
-            fs.writeFileSync(filePath, correctedCode);
-            console.log('📝 Successfully wrote corrected code back to file');
-          } else {
-            // If no code block found, try to extract meaningful content
-            const cleanedOutput = allOutput.replace(/^[^a-zA-Z]*/, '').trim();
-            if (cleanedOutput.includes('describe') || cleanedOutput.includes('it') || cleanedOutput.includes('expect')) {
-              fs.writeFileSync(filePath, cleanedOutput);
-              console.log('📝 Successfully wrote corrected code back to file (fallback extraction)');
-            } else {
-              console.log('⚠️  Could not extract corrected code from Claude response');
-              errorMessage = 'Could not extract corrected code from response';
-              success = false;
-            }
-          }
-        } catch (writeError) {
-          console.log('❌ Failed to write corrected code to file:', writeError);
-          errorMessage = `Failed to write corrected code: ${writeError}`;
-          success = false;
-        }
-      } else if (result.exitCode !== 0) {
+      if (!success) {
         if (errorBuffer) {
           errorMessage = errorBuffer.trim();
         } else {
@@ -242,6 +204,163 @@ Please provide only the corrected JavaScript code without any additional explana
 
   getTestTimeout(): number {
     return this.config.testTimeout || 420000;
+  }
+
+  async fixNextTest(queue: TestFailureQueue, options: {
+    testTimeout?: number;
+    configPath?: string;
+    useJsonOutput?: boolean;
+  } = {}): Promise<ClaudeFixNextResult> {
+    // Check if Claude is available and configured
+    if (!this.isEnabled()) {
+      return {
+        success: false,
+        testFound: false,
+        finalError: 'Claude integration is disabled. Enable it in your .tfqrc config file.'
+      };
+    }
+    
+    const validation = this.validateConfiguration();
+    if (!validation.isValid) {
+      return {
+        success: false,
+        testFound: false,
+        finalError: validation.error
+      };
+    }
+    
+    // Get next test from queue
+    const nextItem = queue.dequeueWithContext();
+    if (!nextItem) {
+      return {
+        success: false,
+        testFound: false,
+        finalError: 'Queue is empty'
+      };
+    }
+    
+    const testPath = nextItem.filePath;
+    const errorContext = nextItem.error;
+    
+    if (!options.useJsonOutput) {
+      console.log(`🤖 Fixing test with Claude: ${testPath}`);
+    }
+    
+    // Apply timeout override if provided
+    if (options.testTimeout) {
+      const timeout = parseInt(options.testTimeout.toString(), 10);
+      if (!isNaN(timeout) && timeout >= 1000) {
+        // Create a new config with the timeout override
+        const config = this.getConfig();
+        config.testTimeout = timeout;
+      }
+    }
+    
+    // Fix the test
+    const fixResult = await this.fixTest(testPath, errorContext);
+    
+    // Verify the fix if Claude processing was successful
+    let verificationResult: {
+      success: boolean;
+      exitCode: number;
+      duration: number;
+      error?: string;
+    } | undefined = undefined;
+    let finalSuccess = fixResult.success;
+    let finalError = fixResult.error;
+    let requeued = false;
+    let maxRetriesExceeded = false;
+    
+    if (fixResult.success) {
+      try {
+        if (!options.useJsonOutput) {
+          console.log('🔍 Verifying fix by running the test...');
+        }
+        
+        // Create TestRunner with the specific test file
+        const verificationRunner = new TestRunner({
+          testPath: testPath,
+          verbose: false,
+          configPath: options.configPath
+        });
+        
+        const testResult = verificationRunner.run();
+        verificationResult = {
+          success: testResult.success,
+          exitCode: testResult.exitCode,
+          duration: testResult.duration,
+          error: testResult.error || undefined
+        };
+        
+        if (testResult.success) {
+          if (!options.useJsonOutput) {
+            console.log('✅ Test verification passed - fix confirmed!');
+          }
+          finalSuccess = true;
+        } else {
+          if (!options.useJsonOutput) {
+            console.log('⚠️ Test verification failed - re-adding to queue');
+            console.log(`Verification error: ${testResult.error || 'Test still fails'}`);
+          }
+          
+          // Re-enqueue with updated error context and incremented failure count
+          const maxRetries = this.config.maxIterations || 3; // Use maxIterations from Claude config
+          if (nextItem.failureCount < maxRetries) {
+            const newErrorContext = `Previous attempt: ${errorContext || 'No context'}\nVerification failed: ${testResult.stderr || testResult.error || 'Test still fails'}`;
+            queue.enqueue(testPath, nextItem.priority, newErrorContext);
+            requeued = true;
+            
+            if (!options.useJsonOutput) {
+              console.log(`🔄 Re-enqueued test (attempt ${nextItem.failureCount + 1}/${maxRetries})`);
+            }
+          } else {
+            maxRetriesExceeded = true;
+            if (!options.useJsonOutput) {
+              console.log(`❌ Max retries (${maxRetries}) exceeded - not re-enqueueing`);
+            }
+          }
+          
+          finalSuccess = false;
+          finalError = `Fix verification failed: ${testResult.error || 'Test still fails'}`;
+        }
+      } catch (verificationError: any) {
+        if (!options.useJsonOutput) {
+          console.log('❌ Test verification failed with error:', verificationError.message);
+        }
+        
+        // Re-enqueue with verification error
+        const maxRetries = this.config.maxIterations || 3;
+        if (nextItem.failureCount < maxRetries) {
+          const newErrorContext = `Previous attempt: ${errorContext || 'No context'}\nVerification error: ${verificationError.message}`;
+          queue.enqueue(testPath, nextItem.priority, newErrorContext);
+          requeued = true;
+          
+          if (!options.useJsonOutput) {
+            console.log(`🔄 Re-enqueued test due to verification error (attempt ${nextItem.failureCount + 1}/${maxRetries})`);
+          }
+        } else {
+          maxRetriesExceeded = true;
+        }
+        
+        finalSuccess = false;
+        finalError = `Verification error: ${verificationError.message}`;
+      }
+    }
+    
+    return {
+      success: finalSuccess,
+      testFound: true,
+      testPath: testPath,
+      claudeProcessing: {
+        success: fixResult.success,
+        duration: fixResult.duration,
+        error: fixResult.error
+      },
+      verification: verificationResult,
+      finalError: finalError,
+      requeued,
+      maxRetriesExceeded
+    };
   }
 
   private logClaudeStreamingOutput(jsonData: any): void {
