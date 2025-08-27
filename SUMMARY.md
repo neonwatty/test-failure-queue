@@ -51,10 +51,10 @@ tfq get-groups                    # View current groups
 tfq next --group                  # Get next group of tests
 ```
 
-### AI-Powered Test Fixing (Claude Code Integration)
+### Claude Code Integration
 ```bash
-tfq fix-next                      # Fix next test with AI
-tfq fix-all                       # Fix all tests iteratively with AI
+tfq fix-next                      # Fix next test with Claude Code
+tfq fix-all                       # Fix all tests iteratively Claude Code
 tfq fix-all --max-iterations 5    # Limit number of fixes
 tfq fix-next --test-timeout 300000  # Custom timeout (milliseconds)
 ```
@@ -110,9 +110,9 @@ tfq next              # Get next test to fix
 # ... fix the test manually ...
 tfq resolve path/to/fixed-test.js
 
-# OR: Use AI to fix automatically (if Claude configured)
-tfq fix-next          # AI fixes next test
-tfq fix-all           # AI fixes all queued tests
+# OR: Use Claude Code to fix (if Claude configured)
+tfq fix-next          # fixes next test
+tfq fix-all           # fixes all queued tests
 
 # 5. Clear queue when done
 tfq clear

@@ -67,6 +67,9 @@ example-tfq.db
 tmp/
 temp/
 
+# Integration test temporary directories
+tests/tmp-integration-*/
+
 # Cache
 .cache/
 .npm/

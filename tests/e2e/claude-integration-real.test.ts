@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ClaudeService } from '../../../src/services/claude/index.js';
-import { setupMockProject, copyClaudeFixtureToProject } from '../../integration/fixtures/mock-projects.js';
+import { ClaudeService } from '../../dist/services/claude/index.js';
+import { setupMockProject, copyClaudeFixtureToProject } from '../integration/fixtures/mock-projects';
 
 describe('Real Claude Integration Tests (Local Only)', () => {
   let service: ClaudeService;

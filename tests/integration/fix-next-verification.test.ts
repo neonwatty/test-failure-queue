@@ -1,45 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { setupIntegrationTest, runTfqCommand } from './test-utils.js';
 
 describe('fix-next Verification Integration', () => {
-  const testDir = path.join(__dirname, '../tmp-integration');
-  const testFile = path.join(testDir, 'verification-test.test.ts');
-  const configFile = path.join(testDir, '.tfqrc');
-  const dbPath = path.join(testDir, '.tfq/test.db');
+  let testDir: string;
+  let testFile: string;
+  let cleanup: () => Promise<void>;
   
   beforeEach(async () => {
-    // Clean up and create test directory
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
-    fs.mkdirSync(testDir, { recursive: true });
-    
-    // Create a minimal config for testing
-    const config = {
-      database: {
-        path: dbPath
-      },
-      language: 'javascript',
-      framework: 'vitest',
-      claude: {
-        enabled: false // Disable Claude for unit tests
-      }
-    };
-    fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
+    const setup = await setupIntegrationTest('fix-next-verification');
+    testDir = setup.testDir;
+    testFile = path.join(testDir, 'verification-test.test.ts');
+    cleanup = setup.cleanup;
   });
 
-  afterEach(() => {
-    // Clean up test directory
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
+  afterEach(async () => {
+    await cleanup();
   });
 
   it('should verify fix and succeed when test passes after Claude processing', async () => {
@@ -140,6 +117,8 @@ describe('Broken test', () => {
 
   it('should track failure count and respect max retries', async () => {
     // Create config with maxRetries = 2
+    const configFile = path.join(testDir, '.tfqrc');
+    const dbPath = path.join(testDir, '.tfq/test.db');
     const configWithRetries = {
       database: {
         path: dbPath
@@ -173,43 +152,4 @@ describe('Math operations', () => {
   }, 15000);
 });
 
-// Helper function to run tfq commands
-async function runTfqCommand(args: string[], cwd: string): Promise<{ success: boolean; output: string; error: string }> {
-  return new Promise((resolve) => {
-    const tfqPath = path.resolve(__dirname, '../../dist/cli.js');
-    const child = spawn('node', [tfqPath, ...args], {
-      cwd,
-      stdio: 'pipe',
-      env: { ...process.env, NODE_ENV: 'test' }
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout?.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    child.stderr?.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    child.on('close', (code) => {
-      resolve({
-        success: code === 0,
-        output: stdout,
-        error: stderr
-      });
-    });
-
-    // Set a timeout to prevent hanging
-    setTimeout(() => {
-      child.kill('SIGTERM');
-      resolve({
-        success: false,
-        output: stdout,
-        error: stderr + '\nTimeout: Command took too long'
-      });
-    }, 10000);
-  });
-}
+// Helper function now imported from test-utils.js

@@ -1,13 +1,13 @@
 # TFQ (Test Failure Queue)
 
-A multi-language test failure management tool with persistent SQLite storage, supporting JavaScript, Python, and Ruby test frameworks.  Easily integates with agentic tools like Claude Code for context-managed test fixing.
+TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across Javascript / Typscript, Python, and Ruby test frameworks.  It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
+
+TFQ optionally integates with Claude Code for precise context-engineered agentic assistance for test fixing.
 
 ## Table of Contents
-- [Overview](#overview)
-- [Essential Commands](#essential-commands)
 - [How It Works](#how-it-works)
-- [Features](#features)
 - [Installation](#installation)
+- [Essential Commands](#essential-commands)
 - [Supported Languages](#supported-languages)
 - [Usage](#usage)
   - [CLI Commands](#cli-commands)
@@ -19,21 +19,6 @@ A multi-language test failure management tool with persistent SQLite storage, su
 - [Development](#development)
 - [Contributing](#contributing)
 
-## Overview
-
-TFQ (Test Failure Queue) is a command-line tool designed to help developers efficiently manage and retry failed tests across multiple programming languages and test frameworks.  It maintains a persistent queue of test failures, allowing you to track, prioritize, and systematically work through test failures across multiple test runs.
-
-## Essential Commands
-
-| Command | What it does |
-|---------|--------------|
-| `tfq init` | Initialize TFQ for your project |
-| `tfq run-tests --auto-add` | Run tests and queue failures |
-| `tfq list` | View queued test failures |
-| `tfq count` | Get the number of items in queue |
-| `tfq stats` | Show queue statistics |
-| `tfq clear` | Clear the queue |
-| `tfq --help` | Show all commands |
 
 ## How It Works
 
@@ -64,7 +49,7 @@ Next steps:
   1. Run your tests: tfq run-tests --auto-detect --auto-add
   2. View queued failures: tfq list
   3. Get next test to fix: tfq next
-  4. Fix tests with AI: tfq fix-next or tfq fix-all
+  4. Fix tests with Claude Code: tfq fix-next or tfq fix-all
 ```
 
 #### Step 1: Run Tests to Discover Failures
@@ -123,35 +108,6 @@ $ tfq next
 src/api/auth.test.js [P5]
 ```
 
-### Key Points
-
-1. **Priority Queue**: Higher priority tests are dequeued first
-2. **Persistent Storage**: Queue persists across sessions
-3. **Language Agnostic**: Works with JavaScript, Python, Ruby, and their test frameworks
-4. **Pattern Matching**: Support for glob patterns to manage multiple files
-5. **Cross-Project**: Can manage test queues for multiple projects
-
-
-## Features
-
-### Core Features
-- **Multi-Language Support**: JavaScript/TypeScript, Python, and Ruby
-- **Multiple Test Frameworks**: 
-  - JavaScript: Jest, Mocha, Vitest, Jasmine, AVA
-  - Python: pytest, unittest
-  - Ruby: Minitest, RSpec
-- **Auto-Detection**: Automatically detects language and test framework with improved error messages
-- **Persistent Storage**: SQLite with WAL mode for better concurrent access
-- **Priority Management**: Assign priorities to different test files
-- **Pattern Matching**: Support for glob patterns to manage multiple files at once
-- **Failure Tracking**: Automatically tracks failure counts and timestamps
-- **Multiple Output Formats**: JSON output for programmatic usage
-- **Cross-Project Support**: Manage test queues for multiple projects
-- **Intelligent Test Grouping**: Organize tests for parallel or sequential execution
-- **Execution Optimization**: Run independent tests in parallel for 40-60% faster execution
-- **Config Validation**: Validates configuration before saving to prevent errors
-- **Claude Code Integration**: Works seamlessly with Claude Code for AI-powered test fixing (see CLAUDE.md)
-
 ## Installation
 
 ```bash
@@ -180,6 +136,17 @@ This command will:
 
 **Note:** If you install TFQ globally, each project should run `tfq init` to create its own database. Without initialization, all projects would share the same global database at `~/.tfq/tfq.db`.
 
+## Essential Commands
+
+| Command | What it does |
+|---------|--------------|
+| `tfq init` | Initialize TFQ for your project |
+| `tfq run-tests --auto-add` | Run tests and queue failures |
+| `tfq list` | View queued test failures |
+| `tfq count` | Get the number of items in queue |
+| `tfq stats` | Show queue statistics |
+| `tfq clear` | Clear the queue |
+| `tfq --help` | Show all commands |
 
 ## Supported Languages
 
@@ -325,7 +292,7 @@ tfq stats --json
 
 ### Test Grouping
 
-TFQ now supports intelligent test grouping for optimized execution, enabling parallel processing of independent tests and sequential execution of dependent tests.
+TFQ supports test grouping for optimized execution, enabling parallel processing of independent tests and sequential execution of dependent tests.
 
 #### Set execution groups
 ```bash
@@ -496,7 +463,7 @@ tfq init --claude-path /custom/path/to/claude
 tfq init --interactive
 ```
 
-### AI-Powered Test Fixing Commands
+### Agentic Test Fixing Commands
 Once configured, you can use these commands for automated test fixing:
 
 ```bash
@@ -510,8 +477,8 @@ tfq fix-all --max-iterations 10
 tfq fix-next --test-timeout 600000
 ```
 
-### Claude Code Slash Commands
-Custom slash commands are also provided in the `commands/` directory:
+### Example Claude Code Slash Commands
+Examples of custom slash commands are also provided in the `commands/` directory for agentic use of the `tfq` cli:
 
 - **`/tfq-run`** - Discovers and queues failing tests
 - **`/tfq-fix-next`** - Fixes the next test in queue using a Task agent

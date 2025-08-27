@@ -1139,17 +1139,16 @@ program
               }
             } else if (testResult.success) {
               if (!useJsonOutput(options)) {
-                console.log(chalk.green('✅ All tests already passing!'));
+                console.log(chalk.yellow('⚠️  All tests already passing!'));
               }
-              result.allTestsPass = true;
               
               if (useJsonOutput(options)) {
-                console.log(JSON.stringify(result));
+                console.log(JSON.stringify({ success: false, error: 'All tests already passing' }));
               } else {
                 console.log();
-                console.log(chalk.green.bold('🎉 All tests are already passing!'));
+                console.log(chalk.yellow('⚠️  All tests are already passing!'));
               }
-              return;
+              process.exit(1);
             } else {
               if (!useJsonOutput(options)) {
                 console.log(chalk.yellow('⚠️ Test command failed but no specific test failures found'));
@@ -1172,17 +1171,16 @@ program
         
         if (result.totalTests === 0) {
           if (!useJsonOutput(options)) {
-            console.log(chalk.green('📊 No failed tests found'));
+            console.log(chalk.yellow('📊 No failed tests found'));
           }
-          result.allTestsPass = true;
           
           if (useJsonOutput(options)) {
-            console.log(JSON.stringify(result));
+            console.log(JSON.stringify({ success: false, error: 'No failed tests found' }));
           } else {
             console.log();
-            console.log(chalk.green.bold('🎉 No tests need fixing!'));
+            console.log(chalk.yellow('⚠️  No tests need fixing!'));
           }
-          return;
+          process.exit(1);
         }
         
         if (!useJsonOutput(options)) {
